@@ -38,7 +38,12 @@ public class VMF2OBJ {
 		
 		try
 		{
-			in = new Scanner(new File(args[0]));
+            File directory = new File(new File(args[1]).getParent());
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            
+            in = new Scanner(new File(args[0]));
 			outfile = new PrintWriter(new FileOutputStream(objname));
 			materialfile = new PrintWriter(new FileOutputStream(matlibname));
 		}
@@ -54,7 +59,7 @@ public class VMF2OBJ {
 			currentLine = in.nextLine();
 			for (String element : currentLine.split(" "))
 			{
-                if (element.equalsIgnoreCase("		side"))
+                if (element.equalsIgnoreCase("\t\tside"))
                 {
                 	numberOfSides++;
                 	

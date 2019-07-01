@@ -1,41 +1,105 @@
 import java.util.*;
 import java.util.regex.*;
+import com.google.gson.*;
+import com.google.gson.stream.*;
+
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 
-public class VMF2OBJ {
+public class App {
 
-	public static void main(String args[])
-	{
-		//Read Geometry
-		//Collapse Vertices
-		//Write objects
-		//Extract Models
-		//Extract materials
-		//Convert Materials
-		//Convert models to SMD
-		//Convert models to OBJ
-		//Write Models
-		//Write Materials
+	static String readFile(String path) throws IOException {
+		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		return new String(encoded, StandardCharsets.UTF_8);
+	}
 
-		if(args.length != 2)
-		{
+	public static void parseVMF(String text) {
+
+		String objectRegex = "([a-zA-z._0-9]+)([{\\[])";
+		//Pattern objectPattern = Pattern.compile(objectRegex);
+		//Matcher objectMatch;
+
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[-a-zA-z.,_0-9/)(\\]\\[]+\")";
+		//Pattern keyValuePattern = Pattern.compile(keyValueRegex);
+		//Matcher keyValueMatch;
+
+		String objectCommaRegex = "[}\\]]\"";
+		//Pattern objectCommaPattern = Pattern.compile(objectCommaRegex);
+		//Matcher objectCommaMatch;
+
+		String cleanUpRegex = ",([}\\]])";
+		//Pattern cleanUpPattern = Pattern.compile(cleanUpRegex);
+		//Matcher cleanUpMatch;
+
+		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
+		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
+		text = text.replaceAll("[\\s\n]", ""); // Remove all whitespaces and newlines
+
+		text = text.replaceAll(objectRegex,"\"$1\":$2");
+		text = text.replaceAll(keyValueRegex,"$1:$2,");
+		text = text.replaceAll(objectCommaRegex,"},\""); 
+		
+		text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+
+		text = "{"+text+"}";
+
+		System.out.println(text);
+	}
+
+	public static void main(String args[]) {
+		// Read Geometry
+		// Collapse Vertices
+		// Write objects
+		// Extract Models
+		// Extract materials
+		// Convert Materials
+		// Convert models to SMD
+		// Convert models to OBJ
+		// Write Models
+		// Write Materials
+
+		if (args.length != 2) {
 			System.err.println("Usage: java vmf2obj <infile> <outpath>");
 			return;
 		}
-		
+
 		Scanner in;
 		PrintWriter outfile;
 		PrintWriter materialfile;
 		String objname = args[1] + ".obj";
 		String matlibname = args[1] + ".mtl";
-		
-		int numberOfSides = 0;
-		String currentLine="";
 
-		ArrayList<String> faces= new ArrayList<String>();
-		ArrayList<String> faceMaterials= new ArrayList<String>();
-		ArrayList<String> verticies= new ArrayList<String>();
-		
+		int numberOfSides = 0;
+		String currentLine = "";
+
+		ArrayList<String> faces = new ArrayList<String>();
+		ArrayList<String> faceMaterials = new ArrayList<String>();
+		ArrayList<String> verticies = new ArrayList<String>();
+
+		// Open file
+		File workingFile = new File(args[0]);
+		if (!workingFile.exists()) {
+			try {
+				File directory = new File(workingFile.getParent());
+				if (!directory.exists()) {
+					directory.mkdirs();
+				}
+				workingFile.createNewFile();
+			} catch (IOException e) {
+				System.out.println("Excepton Occured: " + e.toString());
+			}
+		}
+
+		// Read File
+		String text = "";
+		try {
+			text = readFile(args[0]);
+		}catch (IOException e) {
+			System.out.println("Excepton Occured: " + e.toString());
+		}
+		System.out.println(text);
+
 		try
 		{
             File directory = new File(new File(args[1]).getParent());
@@ -52,6 +116,9 @@ public class VMF2OBJ {
 			System.err.println("Error while opening file: "+e.getMessage());
 			return;
 		}
+
+		parseVMF(text);
+		System.exit(0);
 		
 		System.out.println("Reading geometry...");
 		while (in.hasNext())

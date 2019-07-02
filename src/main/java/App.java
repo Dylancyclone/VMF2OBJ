@@ -1,7 +1,8 @@
 import java.util.*;
 import java.util.regex.*;
+import java.util.stream.Collectors;
 import com.google.gson.*;
-import com.lathrum.VMF2OBJ.VMF;
+import com.lathrum.VMF2OBJ.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -18,51 +19,53 @@ public class App {
 	public static VMF parseVMF(String text) {
 
 		String objectRegex = "([a-zA-z._0-9]+)([{\\[])";
-		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[-a-zA-z.,_0-9/)(\\]\\[ ]+\")";
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[^\"]*\")";
 		String objectCommaRegex = "[}\\]]\"";
 		String cleanUpRegex = ",([}\\]])";
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
+		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
+		text = text.replaceAll("\" \"", "\"\""); // Remove all whitespaces and newlines not in quotes
+		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
 		
 		String solids = "";
-		Pattern solidPattern = Pattern.compile("solid");
+		Pattern solidPattern = Pattern.compile("solid\\{");
 		Matcher solidMatcher = solidPattern.matcher(text);
 		while (solidMatcher.find()) {
-			if (text.charAt(solidMatcher.end()) == '{')
-      {
-        int startIndex = solidMatcher.end();
-        int endIndex = findClosingBracketMatchIndex(text,startIndex);
-        String solid = text.substring(startIndex,endIndex+1);
+			int startIndex = solidMatcher.end()-1;
+			int endIndex = findClosingBracketMatchIndex(text,startIndex);
+			String solid = text.substring(startIndex,endIndex+1);
 
-        text = text.replace(text.substring(solidMatcher.start(),endIndex+1),""); //snip this section
+			text = text.replace(text.substring(solidMatcher.start(),endIndex+1),""); //snip this section
 
-				String sides = "";
-				Pattern sidePattern = Pattern.compile("side");
-				Matcher sideMatcher = sidePattern.matcher(solid);
-				while (sideMatcher.find()) {
-					if (solid.charAt(sideMatcher.end()) == '{')
-					{
-						int sideStartIndex = sideMatcher.end();
-						int sideEndIndex = findClosingBracketMatchIndex(solid,sideStartIndex);
-						String side = solid.substring(sideStartIndex,sideEndIndex+1);
-		
-						solid = solid.replace(solid.substring(sideMatcher.start(),sideEndIndex+1),""); //snip this section
-						side = side.replaceAll(keyValueRegex,"$1:$2,");
-						sides = sides+side+",";
-					}
-					sideMatcher = sidePattern.matcher(solid);
+			String sides = "";
+			Pattern sidePattern = Pattern.compile("side");
+			Matcher sideMatcher = sidePattern.matcher(solid);
+			while (sideMatcher.find()) {
+				if (solid.charAt(sideMatcher.end()) == '{')
+				{
+					int sideStartIndex = sideMatcher.end();
+					int sideEndIndex = findClosingBracketMatchIndex(solid,sideStartIndex);
+					String side = solid.substring(sideStartIndex,sideEndIndex+1);
+	
+					solid = solid.replace(solid.substring(sideMatcher.start(),sideEndIndex+1),""); //snip this section
+					side = side.replaceAll(objectRegex,",\"$1\":$2");
+					side = side.replaceAll(keyValueRegex,"$1:$2,");
+					side = side.replaceAll(",,",",");
+					sides = sides+side+",";
 				}
-				solid = solid.replaceAll(objectRegex,"\"$1\":$2");
-				solid = solid.replaceAll(keyValueRegex,"$1:$2,");
-				solid = solid.replaceAll(objectCommaRegex,"},\"");
-				sides = ",\"sides\":["+sides.substring(0,sides.length()-1)+"]";
-				solid = splice(solid,sides,solid.length()-1);
-				solid = solid.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
-				
-				solids = solids+solid+",";
+				sideMatcher = sidePattern.matcher(solid);
 			}
+			solid = solid.replaceAll(objectRegex,"\"$1\":$2");
+			solid = solid.replaceAll(keyValueRegex,"$1:$2,");
+			solid = solid.replaceAll(objectCommaRegex,"},\"");
+			sides = ",\"sides\":["+sides.substring(0,sides.length()-1)+"]";
+			solid = splice(solid,sides,solid.length()-1);
+			solid = solid.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+			
+			solids = solids+solid+",";
 			solidMatcher = solidPattern.matcher(text);
 		}
 		
@@ -74,15 +77,15 @@ public class App {
       {
         int startIndex = entityMatcher.end();
         int endIndex = findClosingBracketMatchIndex(text,startIndex);
-        String entity = text.substring(startIndex,endIndex+1);
-
+				String entity = text.substring(startIndex,endIndex+1);
+				
         text = text.replace(text.substring(entityMatcher.start(),endIndex+1),""); //snip this section
 
 				entity = entity.replaceAll(objectRegex,"\"$1\":$2");
 				entity = entity.replaceAll(keyValueRegex,"$1:$2,");
 				entity = entity.replaceAll(objectCommaRegex,"},\"");
 				entity = entity.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
-				
+
 				entities = entities+entity+",";
 			}
 			entityMatcher = entityPattern.matcher(text);
@@ -91,8 +94,14 @@ public class App {
 		text = text.replaceAll(objectRegex,"\"$1\":$2");
 		text = text.replaceAll(keyValueRegex,"$1:$2,");
 		text = text.replaceAll(objectCommaRegex,"},\"");
-		solids = ",\"solids\":["+solids.substring(0,solids.length()-1)+"]";
-		entities = ",\"entities\":["+entities.substring(0,entities.length()-1)+"]";
+		if (solids != "")
+		{
+			solids = ",\"solids\":["+solids.substring(0,solids.length()-1)+"]";
+		}
+		if (entities != "")
+		{
+			entities = ",\"entities\":["+entities.substring(0,entities.length()-1)+"]";
+		}
 		text = "{"+text+solids+entities+"}";
 		text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
 
@@ -126,6 +135,191 @@ public class App {
     String end = original.substring(index);
     return begin + insert + end;
 	}
+	
+	public static VMF parseSolids(VMF vmf) {
+		String planeRegex = "\\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\)";
+		Pattern planePattern = Pattern.compile(planeRegex);
+		Matcher planeMatch;
+
+		String uvRegex = "\\[(.+?) (.+?) (.+?) (.+?)\\] (.+)";
+		Pattern uvPattern = Pattern.compile(uvRegex);
+		Matcher uvMatch;
+
+		int i = 0;
+		for (Solid solid : vmf.solids)
+		{
+			int j = 0;
+			for (Side side : solid.sides)
+			{
+				planeMatch = planePattern.matcher(side.plane);
+				Collection<Vector3> vectors = new LinkedList<Vector3>();
+				if (planeMatch.find())
+				{
+					//TODO: May need to flip y and z axes here?
+					vectors.add(new Vector3(
+						Double.parseDouble(planeMatch.group(1)),
+						Double.parseDouble(planeMatch.group(2)),
+						Double.parseDouble(planeMatch.group(3))
+					));
+					vectors.add(new Vector3(
+						Double.parseDouble(planeMatch.group(4)),
+						Double.parseDouble(planeMatch.group(5)),
+						Double.parseDouble(planeMatch.group(6))
+					));
+					vectors.add(new Vector3(
+						Double.parseDouble(planeMatch.group(7)),
+						Double.parseDouble(planeMatch.group(8)),
+						Double.parseDouble(planeMatch.group(9))
+					));
+				}
+				vmf.solids[i].sides[j].points = vectors.toArray(new Vector3[vectors.size()]);
+
+				uvMatch = uvPattern.matcher(side.uaxis);
+				if (uvMatch.find())
+				{
+					vmf.solids[i].sides[j].uAxisVector = new Vector3(
+						Double.parseDouble(uvMatch.group(1)),
+						Double.parseDouble(uvMatch.group(3)),
+						Double.parseDouble(uvMatch.group(2)));
+						vmf.solids[i].sides[j].uAxisTranslation = Double.parseDouble(uvMatch.group(4));
+						vmf.solids[i].sides[j].uAxisScale = Double.parseDouble(uvMatch.group(5));
+				}
+				uvMatch = uvPattern.matcher(side.vaxis);
+				if (uvMatch.find())
+				{
+					vmf.solids[i].sides[j].vAxisVector = new Vector3(
+						Double.parseDouble(uvMatch.group(1)),
+						Double.parseDouble(uvMatch.group(3)),
+						Double.parseDouble(uvMatch.group(2)));
+						vmf.solids[i].sides[j].vAxisTranslation = Double.parseDouble(uvMatch.group(4));
+						vmf.solids[i].sides[j].vAxisScale = Double.parseDouble(uvMatch.group(5));
+				}
+				j++;
+			}
+			
+			j = 0;
+			for (Side side : solid.sides)
+			{
+				side = completeSide(side, solid);
+				if (side != null)
+				{
+					vmf.solids[i].sides[j] = side;
+				}
+				else
+				{
+					System.arraycopy(vmf.solids[i].sides, j + 1, vmf.solids[i].sides, j, vmf.solids[i].sides.length - 1 - j); //Remove invalid side
+				}
+				j++;
+			}
+			i++;
+		}
+
+		return vmf;
+	}
+
+	
+	public static Side completeSide(Side side, Solid solid) {
+
+		Collection<Vector3> intersections = new LinkedList<Vector3>();
+
+		//Add the original points
+		//intersections.add(side.points[0]);
+		//intersections.add(side.points[1]);
+		//intersections.add(side.points[2]);
+
+		for(Side side2 : solid.sides)
+		{
+			for(Side side3 : solid.sides)
+			{
+				Vector3 intersection = GetPlaneIntersectionPoint(side.points, side2.points, side3.points);
+
+				if (intersection == null)
+				{
+					continue;
+				}
+
+				if (intersections.contains(intersection))
+				{
+					continue;
+				}
+				intersections.add((intersection));
+			}
+		}
+
+		//TODO: Convex check?
+
+		//Remove Dupes
+		//Set<Vector3> set = new LinkedHashSet<Vector3>(intersections);
+		//set.addAll(intersections);
+		//intersections = new LinkedList<Vector3>();
+		//intersections.addAll(set);
+
+		if (intersections.size() < 3)
+		{
+			System.out.println("Malformed side "+side.id+", only "+intersections.size()+" points");
+			return null;
+		}
+
+		side.points = intersections.toArray(new Vector3[intersections.size()]);
+
+		if (side.points.length == 4) // Reorder last two vertecies
+		{
+			Vector3 temp = side.points[2];
+			side.points[2] = side.points[3];
+			side.points[3] = temp;
+		}
+
+		return side;
+	}
+
+	public static Vector3 GetPlaneIntersectionPoint(Vector3[] side1, Vector3[] side2, Vector3[] side3)
+	{
+		Plane plane1 = new Plane(side1);
+		Vector3 plane1Normal = plane1.normal().normalize();
+		Plane plane2 = new Plane(side2);
+		Vector3 plane2Normal = plane2.normal().normalize();
+		Plane plane3 = new Plane(side3);
+		Vector3 plane3Normal = plane3.normal().normalize();
+		double determinant =
+			(
+				(
+					plane1Normal.x * plane2Normal.y * plane3Normal.z +
+					plane1Normal.y * plane2Normal.z * plane3Normal.x +
+					plane1Normal.z * plane2Normal.x * plane3Normal.y
+				)
+				-
+				(
+					plane1Normal.z * plane2Normal.y * plane3Normal.x +
+					plane1Normal.y * plane2Normal.x * plane3Normal.z +
+					plane1Normal.x * plane2Normal.z * plane3Normal.y
+				)
+			);
+
+			// Can't intersect parallel planes.
+
+			if (determinant == 0 || Double.isNaN(determinant))
+			{
+				return null;
+			}
+
+
+			Vector3 point =
+			(
+				Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.a.multiply(plane1Normal)).add(
+				Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.a.multiply(plane2Normal))).add(
+				Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.a.multiply(plane3Normal)))
+			)
+			.divide(
+			(new Vector3(determinant,determinant,determinant)));
+
+			if (point.magnitude() > 16384)
+			{
+				//OOB?
+				//return null;
+			}
+
+			return point;
+	}
 
 	public static void main(String args[]) {
 		// Read Geometry
@@ -153,9 +347,9 @@ public class App {
 		int numberOfSides = 0;
 		String currentLine = "";
 
-		ArrayList<String> faces = new ArrayList<String>();
-		ArrayList<String> faceMaterials = new ArrayList<String>();
-		ArrayList<String> verticies = new ArrayList<String>();
+		//ArrayList<String> faces = new ArrayList<String>();
+		//ArrayList<String> faceMaterials = new ArrayList<String>();
+		//ArrayList<String> verticies = new ArrayList<String>();
 
 		// Open file
 		File workingFile = new File(args[0]);
@@ -197,11 +391,90 @@ public class App {
 			return;
 		}
 
+		//
+		// Read Geometry
+		//
+
+		System.out.println("[1/?] Reading geometry...");
+
 		VMF vmf = parseVMF(text);
-		System.out.println(gson.toJson(vmf));
-		System.exit(0);
+		vmf = parseSolids(vmf);
+		//System.out.println(gson.toJson(vmf));
+
+		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
+		ArrayList<String> faces = new ArrayList<String>();
+		int i = 0;
+		int vertexOffset = 1;
+		System.out.println("[2/?] Writing faces...");
 		
+		outfile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
+		outfile.println("mtllib "+matlibname);
+
+		for (Solid solid : vmf.solids)
+		{
+			verticies.clear();
+			faces.clear();
+			int j = 0;
+			for (Side side : solid.sides)
+			{
+				//if (side.material.contains("TOOLS/")){continue;}
+				int k = 0;
+				for (Vector3 point : side.points)
+				{
+					verticies.add(point);
+				}
+			}
+			
+			Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
+			ArrayList<Vector3> uniqueVerticiesList = new ArrayList(uniqueVerticies);
+
+
+			j = 0;
+			for (Side side : solid.sides)
+			{
+				//if (side.material.contains("TOOLS/")){continue;}
+				int k = 0;
+				String buffer = "";
+				for (Vector3 point : side.points)
+				{
+					buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + " ";
+				}
+				faces.add(buffer);
+			}
+			vertexOffset += uniqueVerticiesList.size();
+			
+			//Write Faces
+			
+			outfile.println("\n");
+			outfile.println("o "+solid.id+"\n");
+			
+			for (Vector3 e : uniqueVerticiesList) {
+				outfile.println("v " + e.x +" "+ e.y +" "+ e.z);
+			}
+			
+			//outfile.println("\n" + 
+			//		"#64x64@0.25\n" + 
+			//		"vt 0.000000 1.000000\n" + 
+			//		"vt 36.000000 1.000000\n" + 
+			//		"vt 36.000000 -35.000000\n" + 
+			//		"vt 0.000000 -35.000000\n" + 
+			//		"\n" + 
+			//		"vn 0.000000 1.000000 0.000000\n" +
+			//		"s off\n");
+			outfile.println();
+			
+
+			for (String element : faces) {
+				outfile.println("f " + element);
+			}
+		}
+		
+		//
+		//
+		//
+	/*
 		System.out.println("Reading geometry...");
+
 		while (in.hasNext())
 		{
 			currentLine = in.nextLine();
@@ -294,6 +567,8 @@ public class App {
 		for (String element : faces) {
 			outfile.println("f " + element);
 		}
+
+		*/
 		
 
 		//Extract Models

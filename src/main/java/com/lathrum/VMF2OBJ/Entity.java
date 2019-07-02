@@ -1,8 +1,8 @@
 package com.lathrum.VMF2OBJ;
 
 public class Entity {
-	String id;
-	String classname;
-	String angles;
-	String origin;
+	public String id;
+	public String classname;
+	public String angles;
+	public String origin;
 }

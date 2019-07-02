@@ -1,6 +1,6 @@
 package com.lathrum.VMF2OBJ;
 
 public class VMF {
-	Solid[] solids;
-	Entity[] entities;
+	public Solid[] solids;
+	public Entity[] entities;
 }

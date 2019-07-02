@@ -12,7 +12,7 @@ From the root directory, run:
 
 Process
 - [ ] Read Geometry
-    - [ ] Deserialize data
+    - [X] Deserialize data
     - [ ] Complete data (three points make a *bounded* plane)
 - [ ] Collapse Vertices
 - [ ] Write objects
@@ -31,7 +31,7 @@ Process
 
 Support
 - [ ] Brushes
-    - [ ] Regular
+    - [X] Regular
     - [ ] Irregular
     - [ ] Textures
 - [ ] Displacements

@@ -155,7 +155,6 @@ public class App {
 				Collection<Vector3> vectors = new LinkedList<Vector3>();
 				if (planeMatch.find())
 				{
-					//TODO: May need to flip y and z axes here?
 					vectors.add(new Vector3(
 						Double.parseDouble(planeMatch.group(1)),
 						Double.parseDouble(planeMatch.group(2)),
@@ -207,7 +206,7 @@ public class App {
 				}
 				else
 				{
-					System.arraycopy(vmf.solids[i].sides, j + 1, vmf.solids[i].sides, j, vmf.solids[i].sides.length - 1 - j); //Remove invalid side
+					//System.arraycopy(vmf.solids[i].sides, j + 1, vmf.solids[i].sides, j, vmf.solids[i].sides.length - 1 - j); //Remove invalid side
 				}
 				j++;
 			}
@@ -242,6 +241,7 @@ public class App {
 				{
 					continue;
 				}
+				//System.out.println(intersection);
 				intersections.add((intersection));
 			}
 		}
@@ -253,6 +253,14 @@ public class App {
 		//set.addAll(intersections);
 		//intersections = new LinkedList<Vector3>();
 		//intersections.addAll(set);
+
+		//System.out.println();
+		//System.out.println();
+		//System.out.println(side.id);
+		//for (Vector3 v : intersections)
+		//{
+		//	System.out.println(v);
+		//}
 
 		if (intersections.size() < 3)
 		{
@@ -297,7 +305,7 @@ public class App {
 
 			// Can't intersect parallel planes.
 
-			if (determinant == 0 || Double.isNaN(determinant))
+			if ((determinant <= 0.01 && determinant >= -0.01) || Double.isNaN(determinant))
 			{
 				return null;
 			}
@@ -306,11 +314,19 @@ public class App {
 			Vector3 point =
 			(
 				Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.a.multiply(plane1Normal)).add(
-				Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.a.multiply(plane2Normal))).add(
-				Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.a.multiply(plane3Normal)))
+				Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.b.multiply(plane2Normal))).add(
+				Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.c.multiply(plane3Normal)))
 			)
 			.divide(
 			(new Vector3(determinant,determinant,determinant)));
+
+			//System.out.println();
+			//System.out.println();
+			//System.out.println(plane1);
+			//System.out.println(plane2);
+			//System.out.println(plane3);
+			//System.out.println(determinant);
+			//System.out.println(point);
 
 			if (point.magnitude() > 16384)
 			{
@@ -421,6 +437,7 @@ public class App {
 				int k = 0;
 				for (Vector3 point : side.points)
 				{
+					//System.out.println(point);
 					verticies.add(point);
 				}
 			}

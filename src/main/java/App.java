@@ -1,6 +1,5 @@
 import java.util.*;
 import java.util.regex.*;
-import java.util.stream.Collectors;
 import com.google.gson.*;
 import com.lathrum.VMF2OBJ.*;
 import java.io.*;
@@ -197,12 +196,13 @@ public class App {
 			}
 			
 			j = 0;
-			for (Side side : solid.sides)
+			Solid solidProxy = gson.fromJson(gson.toJson(solid, Solid.class), Solid.class);
+			for (Side side : solidProxy.sides)
 			{
-				side = completeSide(side, solid);
-				if (side != null)
+				Side newSide = completeSide(side, solidProxy);
+				if (newSide != null)
 				{
-					vmf.solids[i].sides[j] = side;
+					vmf.solids[i].sides[j] = newSide;
 				}
 				else
 				{
@@ -230,6 +230,9 @@ public class App {
 		{
 			for(Side side3 : solid.sides)
 			{
+				//System.out.println(side.id);
+				//System.out.println(side2.id);
+				//System.out.println(side3.id);
 				Vector3 intersection = GetPlaneIntersectionPoint(side.points, side2.points, side3.points);
 
 				if (intersection == null)
@@ -268,16 +271,17 @@ public class App {
 			return null;
 		}
 
-		side.points = intersections.toArray(new Vector3[intersections.size()]);
+		Side newSide = gson.fromJson(gson.toJson(side, Side.class), Side.class);
+		newSide.points = intersections.toArray(new Vector3[intersections.size()]);
 
-		if (side.points.length == 4) // Reorder last two vertecies
+		if (newSide.points.length > 3) // Reorder last two vertecies
 		{
-			Vector3 temp = side.points[2];
-			side.points[2] = side.points[3];
-			side.points[3] = temp;
+			Vector3 temp = newSide.points[newSide.points.length-2];
+			newSide.points[newSide.points.length-2] = newSide.points[newSide.points.length-1];
+			newSide.points[newSide.points.length-1] = temp;
 		}
 
-		return side;
+		return newSide;
 	}
 
 	public static Vector3 GetPlaneIntersectionPoint(Vector3[] side1, Vector3[] side2, Vector3[] side3)
@@ -313,20 +317,35 @@ public class App {
 
 			Vector3 point =
 			(
-				Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.a.multiply(plane1Normal)).add(
-				Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.b.multiply(plane2Normal))).add(
-				Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.c.multiply(plane3Normal)))
+				Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.distance()).add(
+				Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.distance())).add(
+				Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.distance()))
 			)
-			.divide(
-			(new Vector3(determinant,determinant,determinant)));
+			.divide(determinant);
 
-			//System.out.println();
-			//System.out.println();
-			//System.out.println(plane1);
-			//System.out.println(plane2);
-			//System.out.println(plane3);
-			//System.out.println(determinant);
-			//System.out.println(point);
+			//In case of emergency break open comment
+			/*
+			System.out.println();
+			System.out.println();
+			System.out.println(plane1);
+			System.out.println(plane1Normal);
+			System.out.println(plane1.distance());
+			System.out.println(plane2);
+			System.out.println(plane2Normal);
+			System.out.println(plane2.distance());
+			System.out.println(plane3);
+			System.out.println(plane3Normal);
+			System.out.println(plane3.distance());
+			System.out.println(determinant);
+			System.out.println(point);
+			System.out.println();
+			System.out.println(Vector3.cross(plane2Normal, plane3Normal));
+			System.out.println(Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.distance()));
+			System.out.println(Vector3.cross(plane3Normal, plane1Normal));
+			System.out.println(Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.distance()));
+			System.out.println(Vector3.cross(plane1Normal, plane2Normal));
+			System.out.println(Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.distance()));
+			*/
 
 			if (point.magnitude() > 16384)
 			{

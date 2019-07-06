@@ -244,6 +244,11 @@ public class App {
 				{
 					continue;
 				}
+				
+				if (!pointInHull(intersection, solid.sides))
+				{
+					//return null;
+				}
 				//System.out.println(intersection);
 				intersections.add((intersection));
 			}
@@ -355,6 +360,47 @@ public class App {
 
 			return point;
 	}
+
+	public static boolean pointInHull(Vector3 point, Side[] sides) {
+		
+		Vector3 sum = new Vector3();
+		for (Side side : sides)
+		{
+			Plane plane = new Plane(side);
+			sum = sum.add(plane.center());
+		}
+		Vector3 center = sum.divide(sides.length);
+
+		for (Side side : sides)
+		{
+			Plane plane = new Plane(side);
+
+			Vector3 direction = plane.center().subtract(center).normalize();
+
+			if (Vector3.dot(plane.normal().normalize(), direction) < 0)
+			{
+				if ((point.subtract(plane.center()).dot(plane.normal().normalize().multiply(-1))) > 0.01) {
+					System.out.println("Point: "+point+", "+(point.subtract(plane.center()).dot(plane.normal().normalize().multiply(-1)))+", from: "+plane);
+					System.out.println(center);
+					System.out.println(direction);
+					System.out.println(Vector3.dot(plane.normal().normalize(), direction)+" REV");
+					return false;
+				};
+			}
+			else
+			{
+				if ((point.subtract(plane.center()).dot(plane.normal().normalize())) > 0.01) {
+					System.out.println("Point: "+point+", "+(point.subtract(plane.center()).dot(plane.normal().normalize()))+", from: "+plane);
+					System.out.println(center);
+					System.out.println(direction);
+					System.out.println(Vector3.dot(plane.normal().normalize(), direction));
+					return false;
+				};
+			}
+		}
+
+    return true;
+}
 
 	public static void main(String args[]) {
 		// Read Geometry

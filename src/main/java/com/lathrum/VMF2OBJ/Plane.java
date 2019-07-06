@@ -28,6 +28,17 @@ public class Plane {
 
         return ab.cross(ac);
     }
+    
+    public Vector3 center() {
+        return this.a.add(b).add(c).divide(3);
+    }
+    
+    public double distance() {
+        Vector3 normal = this.normal();
+
+        return ((this.a.x*normal.x) + (this.a.y*normal.y) + (this.a.z*normal.z))/
+                Math.sqrt(Math.pow(normal.x, 2)+Math.pow(normal.y, 2)+Math.pow(normal.z, 2));
+    }
 
 	public String toString() {
 		return "("+a+","+b+","+c+")";

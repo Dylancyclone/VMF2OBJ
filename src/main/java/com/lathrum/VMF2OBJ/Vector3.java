@@ -13,6 +13,24 @@ public class Vector3 {
 	}
 
 	//No Operator Overloading :(
+	public static Vector3 add(Vector3 tip, Vector3 tail) {
+		return new Vector3(
+			tip.x+tail.x,
+			tip.y+tail.y,
+			tip.z+tail.z);
+	}
+	public Vector3 add(Vector3 vector) {
+		return new Vector3(
+			this.x+vector.x,
+			this.y+vector.y,
+			this.z+vector.z);
+	}
+	public Vector3 add(double num) {
+		return new Vector3(
+			this.x+num,
+			this.y+num,
+			this.z+num);
+	}
 	public static Vector3 subtract(Vector3 tip, Vector3 tail) {
 		return new Vector3(
 			tip.x-tail.x,
@@ -25,17 +43,11 @@ public class Vector3 {
 			this.y-vector.y,
 			this.z-vector.z);
 	}
-	public static Vector3 add(Vector3 tip, Vector3 tail) {
+	public Vector3 subtract(double num) {
 		return new Vector3(
-			tip.x+tail.x,
-			tip.y+tail.y,
-			tip.z+tail.z);
-	}
-	public Vector3 add(Vector3 vector) {
-		return new Vector3(
-			this.x+vector.x,
-			this.y+vector.y,
-			this.z+vector.z);
+			this.x-num,
+			this.y-num,
+			this.z-num);
 	}
 	public static Vector3 multiply(Vector3 vectorA, Vector3 vectorB) {
 		return new Vector3(
@@ -49,6 +61,12 @@ public class Vector3 {
 			this.y*vector.y,
 			this.z*vector.z);
 	}
+	public Vector3 multiply(double num) {
+		return new Vector3(
+			this.x*num,
+			this.y*num,
+			this.z*num);
+	}
 	public static Vector3 divide(Vector3 vectorA, Vector3 vectorB) {
 		return new Vector3(
 			vectorA.x/vectorB.x,
@@ -60,6 +78,12 @@ public class Vector3 {
 			this.x/vector.x,
 			this.y/vector.y,
 			this.z/vector.z);
+	}
+	public Vector3 divide(double num) {
+		return new Vector3(
+			this.x/num,
+			this.y/num,
+			this.z/num);
 	}
 
 	
@@ -84,6 +108,13 @@ public class Vector3 {
 			this.x * vector.y - this.y * vector.x);
 	}
 
+	public static double dot(Vector3 vectorA, Vector3 vectorB) {
+		return (vectorA.x * vectorB.x) + (vectorA.y * vectorB.y) + (vectorA.z * vectorB.z);
+	}
+	public double dot(Vector3 vector) {
+		return (this.x * vector.x) + (this.y * vector.y) + (this.z * vector.z);
+	}
+
 	public static Vector3 normalize(Vector3 vector) {
 		double length = vector.magnitude();
 		return vector.divide(new Vector3(length,length,length));
@@ -105,7 +136,7 @@ public class Vector3 {
 	}
 
 	public int hashCode() {
-		return Math.round(Math.round((x*31 + y)*997 + z));
+		return Math.round(Math.round((x*31 + y)*31 + z));
 	}
 
 }

@@ -126,7 +126,7 @@ public class App {
         break;
       }
     }
-    return -1;    // No matching closing parenthesis
+    return -1; // No matching closing parenthesis
 	}
 	
 	public static String splice(String original, String insert, int index) {
@@ -221,18 +221,10 @@ public class App {
 
 		Collection<Vector3> intersections = new LinkedList<Vector3>();
 
-		//Add the original points
-		//intersections.add(side.points[0]);
-		//intersections.add(side.points[1]);
-		//intersections.add(side.points[2]);
-
 		for(Side side2 : solid.sides)
 		{
 			for(Side side3 : solid.sides)
 			{
-				//System.out.println(side.id);
-				//System.out.println(side2.id);
-				//System.out.println(side3.id);
 				Vector3 intersection = GetPlaneIntersectionPoint(side.points, side2.points, side3.points);
 
 				if (intersection == null)
@@ -247,28 +239,14 @@ public class App {
 				
 				if (!pointInHull(intersection, solid.sides))
 				{
-					//return null;
+					continue;
 				}
-				//System.out.println(intersection);
 				intersections.add((intersection));
 			}
 		}
 
-		//TODO: Convex check?
-
-		//Remove Dupes
-		//Set<Vector3> set = new LinkedHashSet<Vector3>(intersections);
-		//set.addAll(intersections);
-		//intersections = new LinkedList<Vector3>();
-		//intersections.addAll(set);
-
-		//System.out.println();
-		//System.out.println();
-		//System.out.println(side.id);
-		//for (Vector3 v : intersections)
-		//{
-		//	System.out.println(v);
-		//}
+		// TODO: Convex check?
+		// Theoretically source only allows convex shapes, and fixes any problems upon saving...
 
 		if (intersections.size() < 3)
 		{
@@ -276,15 +254,41 @@ public class App {
 			return null;
 		}
 
-		Side newSide = gson.fromJson(gson.toJson(side, Side.class), Side.class);
-		newSide.points = intersections.toArray(new Vector3[intersections.size()]);
-
-		if (newSide.points.length > 3) // Reorder last two vertecies
+		Vector3 sum = new Vector3();
+		for (Vector3 point : intersections)
 		{
-			Vector3 temp = newSide.points[newSide.points.length-2];
-			newSide.points[newSide.points.length-2] = newSide.points[newSide.points.length-1];
-			newSide.points[newSide.points.length-1] = temp;
+			sum = sum.add(point);
 		}
+		final Vector3 center = sum.divide(intersections.size());
+		final Vector3 normal = new Plane(side).normal().normalize();
+		
+		List<Vector3> IntersectionsList = new ArrayList<Vector3>(intersections);
+		Collections.sort(IntersectionsList, new Comparator<Vector3>() {
+			@Override
+			public int compare(Vector3 o1, Vector3 o2) {
+				double det = Vector3.dot(normal, Vector3.cross(o1.subtract(center), o2.subtract(center)));
+				if (det < 0){
+					return -1;
+				}
+				if (det > 0){
+					return 1;
+				}
+
+				// If 0, then they are colinear, just select which point is further from the center
+				double d1 = o1.subtract(center).magnitude();
+				double d2 = o2.subtract(center).magnitude();
+				if (d1<d2) {
+					return -1;
+				}
+				else {
+					return 1;
+				}
+			}
+		});
+
+		Side newSide = gson.fromJson(gson.toJson(side, Side.class), Side.class);
+
+		newSide.points = IntersectionsList.toArray(new Vector3[IntersectionsList.size()]);
 
 		return newSide;
 	}
@@ -328,74 +332,18 @@ public class App {
 			)
 			.divide(determinant);
 
-			//In case of emergency break open comment
-			/*
-			System.out.println();
-			System.out.println();
-			System.out.println(plane1);
-			System.out.println(plane1Normal);
-			System.out.println(plane1.distance());
-			System.out.println(plane2);
-			System.out.println(plane2Normal);
-			System.out.println(plane2.distance());
-			System.out.println(plane3);
-			System.out.println(plane3Normal);
-			System.out.println(plane3.distance());
-			System.out.println(determinant);
-			System.out.println(point);
-			System.out.println();
-			System.out.println(Vector3.cross(plane2Normal, plane3Normal));
-			System.out.println(Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.distance()));
-			System.out.println(Vector3.cross(plane3Normal, plane1Normal));
-			System.out.println(Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.distance()));
-			System.out.println(Vector3.cross(plane1Normal, plane2Normal));
-			System.out.println(Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.distance()));
-			*/
-
-			if (point.magnitude() > 16384)
-			{
-				//OOB?
-				//return null;
-			}
-
 			return point;
 	}
 
 	public static boolean pointInHull(Vector3 point, Side[] sides) {
-		
-		Vector3 sum = new Vector3();
-		for (Side side : sides)
-		{
-			Plane plane = new Plane(side);
-			sum = sum.add(plane.center());
-		}
-		Vector3 center = sum.divide(sides.length);
 
 		for (Side side : sides)
 		{
 			Plane plane = new Plane(side);
+			Vector3 facing = point.subtract(plane.center()).normalize();
 
-			Vector3 direction = plane.center().subtract(center).normalize();
-
-			if (Vector3.dot(plane.normal().normalize(), direction) < 0)
-			{
-				if ((point.subtract(plane.center()).dot(plane.normal().normalize().multiply(-1))) > 0.01) {
-					System.out.println("Point: "+point+", "+(point.subtract(plane.center()).dot(plane.normal().normalize().multiply(-1)))+", from: "+plane);
-					System.out.println(center);
-					System.out.println(direction);
-					System.out.println(Vector3.dot(plane.normal().normalize(), direction)+" REV");
-					return false;
-				};
-			}
-			else
-			{
-				if ((point.subtract(plane.center()).dot(plane.normal().normalize())) > 0.01) {
-					System.out.println("Point: "+point+", "+(point.subtract(plane.center()).dot(plane.normal().normalize()))+", from: "+plane);
-					System.out.println(center);
-					System.out.println(direction);
-					System.out.println(Vector3.dot(plane.normal().normalize(), direction));
-					return false;
-				};
+			if (Vector3.dot(facing, plane.normal().normalize()) < -0.01) {
+				return false;
 			}
 		}
 
@@ -424,13 +372,6 @@ public class App {
 		PrintWriter materialfile;
 		String objname = args[1] + ".obj";
 		String matlibname = args[1] + ".mtl";
-
-		int numberOfSides = 0;
-		String currentLine = "";
-
-		//ArrayList<String> faces = new ArrayList<String>();
-		//ArrayList<String> faceMaterials = new ArrayList<String>();
-		//ArrayList<String> verticies = new ArrayList<String>();
 
 		// Open file
 		File workingFile = new File(args[0]);
@@ -484,7 +425,6 @@ public class App {
 
 		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
 		ArrayList<String> faces = new ArrayList<String>();
-		int i = 0;
 		int vertexOffset = 1;
 		System.out.println("[2/?] Writing faces...");
 		
@@ -495,11 +435,9 @@ public class App {
 		{
 			verticies.clear();
 			faces.clear();
-			int j = 0;
 			for (Side side : solid.sides)
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
-				int k = 0;
 				for (Vector3 point : side.points)
 				{
 					//System.out.println(point);
@@ -507,15 +445,13 @@ public class App {
 				}
 			}
 			
+			//TODO: Margin of error?
 			Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
-			ArrayList<Vector3> uniqueVerticiesList = new ArrayList(uniqueVerticies);
+			ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 
-
-			j = 0;
 			for (Side side : solid.sides)
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
-				int k = 0;
 				String buffer = "";
 				for (Vector3 point : side.points)
 				{
@@ -550,119 +486,6 @@ public class App {
 				outfile.println("f " + element);
 			}
 		}
-		
-		//
-		//
-		//
-	/*
-		System.out.println("Reading geometry...");
-
-		while (in.hasNext())
-		{
-			currentLine = in.nextLine();
-			for (String element : currentLine.split(" "))
-			{
-                if (element.equalsIgnoreCase("\t\tside"))
-                {
-                	numberOfSides++;
-                	
-                	in.nextLine();
-                	in.nextLine();
-                	
-                	Pattern pattern = Pattern.compile("([-0-9. ()]+)");
-                	Matcher matcher = pattern.matcher(in.nextLine().split("\"")[3].replaceAll("([0-9]+)", "$1.000000").replaceAll("(\\) \\()", ")("));
-                    while(matcher.find()) {
-                    	faces.add(matcher.group());
-                    	//System.out.println(matcher.group());
-                    	
-                    	Pattern pattern2 = Pattern.compile("([-0-9. ]+)");
-                    	Matcher matcher2 = pattern2.matcher(matcher.group());
-                    	
-                    	while(matcher2.find()) {
-                        	verticies.add(matcher2.group());
-                        	//System.out.println(matcher2.group());
-                    	}
-                    }
-                    faceMaterials.add(in.nextLine().split("\"")[3]);
-                }
-            }
-		}
-		Set<String> uniqueFaceMaterials = new HashSet<String>(faceMaterials);
-		ArrayList<String> uniqueFaceMaterialsList = new ArrayList(uniqueFaceMaterials);
-
-
-		
-		//Collapse Vertices
-		System.out.println("Collapsing Verticies...");
-		
-		
-		Set<String> uniqueVerticies = new HashSet<String>(verticies);
-		ArrayList<String> uniqueVerticiesList = new ArrayList(uniqueVerticies);
-		
-		int counter = 0;
-		for (String element : faces) {
-			//System.out.println(element);
-			
-			Pattern pattern = Pattern.compile("([-0-9. ]+)");
-        	Matcher matcher = pattern.matcher(element);
-        	
-        	String buffer = "";
-        	while(matcher.find()) {
-            	//verticies.add(matcher.group());
-            	//System.out.println(matcher.group());
-            	//System.out.println(uniqueVerticiesList.indexOf(matcher.group()));
-            	buffer += uniqueVerticiesList.indexOf(matcher.group()) + 1 + " ";
-        	}
-        	//System.out.println(buffer);
-        	faces.set(counter, buffer);
-        	counter++;
-		}
-		//System.out.println(uniqueVerticiesList.indexOf(verticies.get(0)));
-		//System.out.println(verticies.get(0));
-		//System.out.println(uniqueVerticiesList.toString());
-		System.out.println(faces.toString());
-		System.out.println(faceMaterials.toString());
-		
-		
-		//Write Faces
-		System.out.println("Writing faces...");
-		
-		outfile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
-		outfile.println("mtllib "+matlibname);
-		outfile.println("o converted\n");
-		
-		for (String element : uniqueVerticiesList) {
-			outfile.println("v " + element);
-		}
-		
-		outfile.println("\n" + 
-				"#64x64@0.25\n" + 
-				"vt 0.000000 1.000000\n" + 
-				"vt 36.000000 1.000000\n" + 
-				"vt 36.000000 -35.000000\n" + 
-				"vt 0.000000 -35.000000\n" + 
-				"\n" + 
-				"vn 0.000000 1.000000 0.000000\n" +
-				"s off\n");
-		
-
-		for (String element : faces) {
-			outfile.println("f " + element);
-		}
-
-		*/
-		
-
-		//Extract Models
-		//Extract materials
-		//Convert Materials
-		//Convert models to SMD
-		//Convert models to OBJ
-		//Write Models
-		//Write Materials
-		
-		
-		
 		
 		in.close();
 		outfile.close();

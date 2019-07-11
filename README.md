@@ -11,12 +11,12 @@ From the root directory, run:
 ## TODO
 
 Process
-- [ ] Read Geometry
+- [X] Read Brush Geometry
     - [X] Deserialize data
-    - [ ] Complete data (three points make a *bounded* plane)
-- [ ] Collapse Vertices
-- [ ] Write objects
-    - [ ] Per object or collapsed?
+    - [X] Complete data (three points make a *bounded* plane)
+- [X] Collapse Brush Vertices
+- [X] Write Brushes
+    - [X] ~~Per object or collapsed?~~ Per object, but may add option later
 - [ ] Extract Models
     - [ ] VPK integration
 - [ ] Extract materials
@@ -32,10 +32,10 @@ Process
 Support
 - [ ] Brushes
     - [X] Regular
-    - [ ] Irregular
+    - [X] Irregular
     - [ ] Textures
 - [ ] Displacements
-- [ ] Brush entities
+- [X] Brush entities
 - [ ] Point Entities
 - [ ] Models
     - [ ] Geometry

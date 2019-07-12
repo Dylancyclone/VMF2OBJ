@@ -6,7 +6,13 @@ A work-in-progress Java application to convert VMF files into OBJ files with mat
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUT_FOLDER]`
+`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUT_FOLDER] [VPK_PATH]`
+
+## Packaged Dependencies
+
+This project packages the following software and uses them during the conversion process. This project would not be possible without them.
+
+- [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40)
 
 ## TODO
 
@@ -34,6 +40,8 @@ Support
     - [X] Regular
     - [X] Irregular
     - [ ] Textures
+        - [ ] Basic VTFs
+        - [ ] VMTs (blends etc)
 - [ ] Displacements
 - [X] Brush entities
 - [ ] Point Entities

@@ -22,6 +22,16 @@ public class Plane {
         this.c = points[2];
     }
     
+    public Plane(Side side) {
+        if (side.points.length < 3)
+        {
+            throw new IllegalArgumentException("Plane must have 3 points");
+        }
+        this.a = side.points[0];
+        this.b = side.points[1];
+        this.c = side.points[2];
+    }
+    
     public Vector3 normal() {
         Vector3 ab = this.b.subtract(a);
         Vector3 ac = this.c.subtract(a);

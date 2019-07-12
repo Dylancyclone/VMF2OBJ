@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.awt.image.BufferedImage;
+import javax.imageio.*;
 
 public class App {
 
@@ -135,6 +137,7 @@ public class App {
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" \"", "\"\""); // Remove all whitespaces and newlines not in quotes
 		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
@@ -287,8 +290,8 @@ public class App {
 				{
 					vmf.solids[i].sides[j].uAxisVector = new Vector3(
 						Double.parseDouble(uvMatch.group(1)),
-						Double.parseDouble(uvMatch.group(3)),
-						Double.parseDouble(uvMatch.group(2)));
+						Double.parseDouble(uvMatch.group(2)),
+						Double.parseDouble(uvMatch.group(3)));
 						vmf.solids[i].sides[j].uAxisTranslation = Double.parseDouble(uvMatch.group(4));
 						vmf.solids[i].sides[j].uAxisScale = Double.parseDouble(uvMatch.group(5));
 				}
@@ -297,8 +300,8 @@ public class App {
 				{
 					vmf.solids[i].sides[j].vAxisVector = new Vector3(
 						Double.parseDouble(uvMatch.group(1)),
-						Double.parseDouble(uvMatch.group(3)),
-						Double.parseDouble(uvMatch.group(2)));
+						Double.parseDouble(uvMatch.group(2)),
+						Double.parseDouble(uvMatch.group(3)));
 						vmf.solids[i].sides[j].vAxisTranslation = Double.parseDouble(uvMatch.group(4));
 						vmf.solids[i].sides[j].vAxisScale = Double.parseDouble(uvMatch.group(5));
 				}
@@ -470,7 +473,7 @@ public class App {
 		return -1;
 	}
 
-	public static void main(String args[]) {
+	public static void main(String args[]) throws Exception{
 		// Read Geometry
 		// Collapse Vertices
 		// Write objects
@@ -577,6 +580,7 @@ public class App {
 
 		ArrayList<String> materials = new ArrayList<String>();
 		int vertexOffset = 1;
+		int vertexTextureOffset = 1;
 		System.out.println("[3/?] Writing faces...");
 		
 		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
@@ -617,7 +621,7 @@ public class App {
 
 			
 			for (String el : uniqueMaterialsList) {
-				System.out.println(el);
+				//System.out.println(el);
 				int index = getEntryIndexByPath(vpkMaterials, "materials/"+el+".vtf"); //TODO: Only basic vtf
 				//System.out.println(index);
 				if (index != -1){
@@ -639,10 +643,6 @@ public class App {
 								"-folder", formatPath(materialOutPath.toString()),
 								"-output", formatPath(materialOutPath.getParent()),
 								"-exportformat", "tga"};
-								for (String a : command)
-								{
-									System.out.print(a+" ");
-								}
 						
 								proc = Runtime.getRuntime().exec(command);
 								proc.waitFor();
@@ -670,24 +670,58 @@ public class App {
 				}
 			}
 			
-			objFile.println("\n" + 
-					"#64x64@0.25\n" + 
-					"vt 0.000000 1.000000\n" + 
-					"vt 36.000000 1.000000\n" + 
-					"vt 36.000000 -35.000000\n" + 
-					"vt 0.000000 -35.000000\n");
+			//objFile.println("\n" + 
+			//		"#64x64@0.25\n" + 
+			//		"vt 0.000000 1.000000\n" + 
+			//		"vt 36.000000 1.000000\n" + 
+			//		"vt 36.000000 -35.000000\n" + 
+			//		"vt 0.000000 -35.000000\n");
 			objFile.println();
 			
 			for (Side side : solid.sides)
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
+				File materialOutPath = new File(Paths.get(outPath).getParent().resolve("materials").toString());
+				Path materialPath = Paths.get(materialOutPath.toString()+File.separator+side.material.toLowerCase()+".tga");
+				
+				int width = 1;
+				int height = 1;
+				try {
+					byte[] fileContent = Files.readAllBytes(materialPath);
+					BufferedImage bimg = TargaReader.decode(fileContent);
+					width = bimg.getWidth();
+					height = bimg.getHeight();
+				}
+				catch (Exception e) {
+					System.out.println("Cant read Material: "+ materialPath);
+					//System.out.println(e);
+				}
+
+				side.uAxisTranslation = side.uAxisTranslation % width;
+				side.vAxisTranslation = side.vAxisTranslation % height;
+
+				if (side.uAxisTranslation < -width / 2)
+				{
+					side.uAxisTranslation += width;
+				}
+
+				if (side.vAxisTranslation < -height / 2)
+				{
+					side.vAxisTranslation += height;
+				}
+
 				String buffer = "";
 				for (int i = 0; i < side.points.length; i++)
 				{
-					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+1)+" ";
+					double u = Vector3.dot(side.points[i], side.uAxisVector) / (width * side.uAxisScale) + side.uAxisTranslation / width;
+					double v = Vector3.dot(side.points[i], side.vAxisVector) / (height * side.vAxisScale) + side.vAxisTranslation / height;
+					objFile.println("vt "+u+" "+v);
+					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
 				}
 				faces.add(buffer);
+				vertexTextureOffset += side.points.length;
 			}
+			objFile.println();
 			vertexOffset += uniqueVerticiesList.size();
 			
 

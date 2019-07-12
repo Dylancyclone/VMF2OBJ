@@ -26,8 +26,10 @@ Process
 - [ ] Extract Models
     - [ ] VPK integration
 - [ ] Extract materials
-- [ ] Convert Materials
-    - [ ] VTFLib?
+    - [X] Basic VTFs
+    - [ ] VMTs (blends etc)
+- [X] Convert Materials
+    - [X] VTFLib?
 - [ ] Convert models to SMD
     - [ ] Crowbar?
 - [ ] Convert models to OBJ
@@ -40,7 +42,9 @@ Support
     - [X] Regular
     - [X] Irregular
     - [ ] Textures
-        - [ ] Basic VTFs
+        - [X] From VPK
+        - [ ] From external source (i.e decompiled map)
+        - [X] Basic VTFs
         - [ ] VMTs (blends etc)
 - [ ] Displacements
 - [X] Brush entities

@@ -33,6 +33,15 @@
     </dependency>
   </dependencies>
   <build>
+	<resources>
+      <resource>
+        <directory>src/lib</directory>
+        <includes>
+          <include>**/*.dll</include>
+          <include>**/*.exe</include>
+        </includes>
+      </resource>
+    </resources>
   	<plugins>
   		<plugin>
 		   <groupId>org.apache.maven.plugins</groupId>

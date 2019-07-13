@@ -1,18 +1,129 @@
 import java.util.*;
+import java.util.zip.*;
 import java.util.regex.*;
 import com.google.gson.*;
 import com.lathrum.VMF2OBJ.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.awt.image.BufferedImage;
 
 public class App {
 
 	public static Gson gson = new Gson();
+	public static Process proc;
+	public static String VTFLibPath;
+
+	public static void extractLibraries(String dir) throws URISyntaxException {
+		//Spooky scary, but I don't want to reinvent the wheel.
+		ArrayList<String> files = new ArrayList<String>();
+		File tempFolder = new File(dir);
+		tempFolder.mkdirs();
+		tempFolder.deleteOnExit();
+
+		//VTFLIB
+		//http://nemesis.thewavelength.net/index.php?p=40
+		//For converting VTF file to TGA files
+		files.add("DevIL.dll"); //VTFLib dependency
+		files.add("VTFLib.dll"); //VTFLib dependency
+		files.add("VTFCmd.exe"); //VTFLib itself
+
+		URI uri = new URI("");
+		URI fileURI;
+
+		try {
+			uri = App.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+		}
+		catch (Exception e) {
+			System.err.println("Exception: "+e);
+		}
+
+		for (String el : files)
+		{
+			ZipFile zipFile;
+
+			try {
+				zipFile = new ZipFile(new File(uri));
+
+				try
+				{
+					fileURI = extractFile(zipFile, el, dir);
+
+					switch (el){
+						case ("VTFCmd.exe"):
+							VTFLibPath = Paths.get(fileURI).toString();
+							break;
+					}
+				}
+				finally
+				{
+					zipFile.close();
+				}
+			}
+			catch (Exception e) {
+				System.err.println("Exception: "+e);
+			}
+		}
+	}
+
+	public static URI extractFile(ZipFile zipFile, String fileName, String dir) throws IOException {
+			File tempFile;
+			ZipEntry entry;
+			InputStream zipStream;
+			OutputStream fileStream;
+
+			tempFile = new File(dir+File.separator+fileName);
+			tempFile.createNewFile();
+			tempFile.deleteOnExit();
+			entry = zipFile.getEntry(fileName);
+
+			if(entry == null)
+			{
+				throw new FileNotFoundException("cannot find file: " + fileName + " in archive: " + zipFile.getName());
+			}
+
+			zipStream  = zipFile.getInputStream(entry);
+			fileStream = null;
+
+			try
+			{
+				final byte[] buf;
+				int i;
+
+				fileStream = new FileOutputStream(tempFile);
+				buf = new byte[1024];
+				i = 0;
+
+				while((i = zipStream.read(buf)) != -1)
+				{
+					fileStream.write(buf, 0, i);
+				}
+			}
+			finally
+			{
+				zipStream.close();
+				fileStream.close();
+			}
+
+			return (tempFile.toURI());
+	}
 
 	static String readFile(String path) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return new String(encoded, StandardCharsets.UTF_8);
+	}
+	
+	public static String formatPath(String res) {
+		if (res==null) return null;
+		if (File.separatorChar=='\\') {
+				// From Windows to Linux/Mac
+				return res.replace('/', File.separatorChar);
+		} else {
+				// From Linux/Mac to Windows
+				return res.replace('\\', File.separatorChar);
+		}
 	}
 
 	public static VMF parseVMF(String text) {
@@ -25,6 +136,7 @@ public class App {
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" \"", "\"\""); // Remove all whitespaces and newlines not in quotes
 		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
@@ -108,6 +220,59 @@ public class App {
 		return vmf;
 	}
 
+	public static VMT parseVMT(String text) {
+
+		if (text.substring(1,6).equals("Water")) // If water texture
+		{
+			//Water is weird. It doesn't really have a displayable texture other than a normal map,
+			//which shouldn't really be used anyways in this case. So we'll give it an obvious texture
+			//So it can be easily changed
+			VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+			return vmt;
+		}
+
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[^\"]*\")";
+		String cleanUpRegex = ",([}\\]])";
+
+		//Holy moly do I wish Valve was consistant in their kv files.
+		//All the following are just to format the file correctly.
+
+		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
+		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
+		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("srgb\\?", ""); // Remove all weirdos
+		text = text.replaceAll("-dx10", ""); // Remove all dx10 fallback textures
+		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
+		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
+		text = text.replaceAll("\\$", ""); // Remove all key prefixes
+		text = text.replaceAll("\"%.+", ""); // Remove all lines with keys that start with percentage signs
+		//text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
+		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
+		text = text.replaceAll("\" +\"", "\"\""); // Remove all whitespaces and newlines not in quotes
+		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
+		
+		Pattern bracketPattern = Pattern.compile("\\{");
+		Matcher bracketMatcher = bracketPattern.matcher(text);
+		if (bracketMatcher.find()) {
+			int startIndex = bracketMatcher.end()-1;
+			int endIndex = findClosingBracketMatchIndex(text,startIndex);
+			if (endIndex == -1) // Invalid vmt
+			{
+				VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+				return vmt;
+			}
+			text = text.substring(startIndex,endIndex+1);
+
+			text = text.replaceAll(keyValueRegex,"$1:$2,");
+			text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+		}
+		text=text.toLowerCase();
+
+		//System.out.println(text);
+		VMT vmt = gson.fromJson(text, VMT.class);
+		return vmt;
+	}
+
 	
   public static int findClosingBracketMatchIndex(String str, int pos) {
     if (str.charAt(pos) != '{') {
@@ -177,8 +342,8 @@ public class App {
 				{
 					vmf.solids[i].sides[j].uAxisVector = new Vector3(
 						Double.parseDouble(uvMatch.group(1)),
-						Double.parseDouble(uvMatch.group(3)),
-						Double.parseDouble(uvMatch.group(2)));
+						Double.parseDouble(uvMatch.group(2)),
+						Double.parseDouble(uvMatch.group(3)));
 						vmf.solids[i].sides[j].uAxisTranslation = Double.parseDouble(uvMatch.group(4));
 						vmf.solids[i].sides[j].uAxisScale = Double.parseDouble(uvMatch.group(5));
 				}
@@ -187,8 +352,8 @@ public class App {
 				{
 					vmf.solids[i].sides[j].vAxisVector = new Vector3(
 						Double.parseDouble(uvMatch.group(1)),
-						Double.parseDouble(uvMatch.group(3)),
-						Double.parseDouble(uvMatch.group(2)));
+						Double.parseDouble(uvMatch.group(2)),
+						Double.parseDouble(uvMatch.group(3)));
 						vmf.solids[i].sides[j].vAxisTranslation = Double.parseDouble(uvMatch.group(4));
 						vmf.solids[i].sides[j].vAxisScale = Double.parseDouble(uvMatch.group(5));
 				}
@@ -348,9 +513,36 @@ public class App {
 		}
 
     return true;
-}
+	}
 
-	public static void main(String args[]) {
+	public static int getEntryIndexByPath(ArrayList<Entry> object, String path) {
+		for (int i = 0; i < object.size(); i++) {
+			if (object !=null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
+				return i;
+			}
+			//else{System.out.println(object.get(i).getFullPath());}
+		}
+		return -1;
+	}
+	public static int getTextureIndexByName(ArrayList<Texture> object, String name) {
+		for (int i = 0; i < object.size(); i++) {
+			if (object !=null && object.get(i).name.equalsIgnoreCase(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	public static int getTextureIndexByFileName(ArrayList<Texture> object, String name) {
+		for (int i = 0; i < object.size(); i++) {
+			if (object !=null && object.get(i).fileName.equalsIgnoreCase(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+
+	public static void main(String args[]) throws Exception{
 		// Read Geometry
 		// Collapse Vertices
 		// Write objects
@@ -362,18 +554,47 @@ public class App {
 		// Write Models
 		// Write Materials
 
-		if (args.length != 2) {
-			System.err.println("Usage: java vmf2obj <infile> <outpath>");
+		if (args.length != 3) {
+			System.err.println("Usage: java vmf2obj <infile> <outpath> <vpkpath>");
 			return;
 		}
 
 		Scanner in;
-		PrintWriter outfile;
-		PrintWriter materialfile;
-		String objname = args[1] + ".obj";
-		String matlibname = args[1] + ".mtl";
+		PrintWriter objFile;
+		PrintWriter materialFile;
+		String outPath = args[1];
+		String objName = outPath + ".obj";
+		String matLibName = outPath + ".mtl";
+		
+		try{
+			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
+		}
+		catch (Exception e) {
+			System.err.println("Exception: "+e);
+		}
+		
 
-		// Open file
+		// Open vpk file
+		System.out.println("[1/?] Reading VPK...");
+		File vpkFile = new File(args[2]);
+		VPK vpk = new VPK(vpkFile);
+		try {
+			vpk.load();
+		}
+		catch(Exception e)
+		{
+			System.err.println("Error while loading vpk file: "+e.getMessage());
+			return;
+		}
+
+		ArrayList<Entry> vpkMaterials = new ArrayList<Entry>();
+		for (Directory directory : vpk.getDirectories()) {
+			for (Entry entry : directory.getEntries()) {
+				vpkMaterials.add(entry);
+			}
+		}
+
+		// Open infile
 		File workingFile = new File(args[0]);
 		if (!workingFile.exists()) {
 			try {
@@ -383,7 +604,7 @@ public class App {
 				}
 				workingFile.createNewFile();
 			} catch (IOException e) {
-				System.out.println("Excepton Occured: " + e.toString());
+				System.out.println("Exception Occured: " + e.toString());
 			}
 		}
 
@@ -392,20 +613,20 @@ public class App {
 		try {
 			text = readFile(args[0]);
 		}catch (IOException e) {
-			System.out.println("Excepton Occured: " + e.toString());
+			System.out.println("Exception Occured: " + e.toString());
 		}
 		//System.out.println(text);
 
 		try
 		{
-			File directory = new File(new File(args[1]).getParent());
+			File directory = new File(new File(outPath).getParent());
 			if (!directory.exists()) {
 					directory.mkdirs();
 			}
 			
 			in = new Scanner(new File(args[0]));
-			outfile = new PrintWriter(new FileOutputStream(objname));
-			materialfile = new PrintWriter(new FileOutputStream(matlibname));
+			objFile = new PrintWriter(new FileOutputStream(objName));
+			materialFile = new PrintWriter(new FileOutputStream(matLibName));
 		}
 		catch(IOException e)
 		{
@@ -417,7 +638,7 @@ public class App {
 		// Read Geometry
 		//
 
-		System.out.println("[1/?] Reading geometry...");
+		System.out.println("[2/?] Reading geometry...");
 
 		VMF vmf = parseVMF(text);
 		vmf = parseSolids(vmf);
@@ -425,19 +646,26 @@ public class App {
 
 		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
 		ArrayList<String> faces = new ArrayList<String>();
+
+		ArrayList<String> materials = new ArrayList<String>();
+		ArrayList<Texture> textures = new ArrayList<Texture>();
 		int vertexOffset = 1;
-		System.out.println("[2/?] Writing faces...");
+		int vertexTextureOffset = 1;
+		System.out.println("[3/?] Writing faces...");
 		
-		outfile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
-		outfile.println("mtllib "+matlibname);
+		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
+		objFile.println("mtllib "+matLibName);
 
 		for (Solid solid : vmf.solids)
 		{
 			verticies.clear();
 			faces.clear();
+			materials.clear();
+
 			for (Side side : solid.sides)
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
+				materials.add(side.material);
 				for (Vector3 point : side.points)
 				{
 					//System.out.println(point);
@@ -449,47 +677,168 @@ public class App {
 			Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
 			ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 
-			for (Side side : solid.sides)
-			{
-				//if (side.material.contains("TOOLS/")){continue;}
-				String buffer = "";
-				for (Vector3 point : side.points)
-				{
-					buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + " ";
-				}
-				faces.add(buffer);
-			}
-			vertexOffset += uniqueVerticiesList.size();
+			Set<String> uniqueMaterials = new HashSet<String>(materials);
+			ArrayList<String> uniqueMaterialsList = new ArrayList<String>(uniqueMaterials);
+			
 			
 			//Write Faces
 			
-			outfile.println("\n");
-			outfile.println("o "+solid.id+"\n");
+			objFile.println("\n");
+			objFile.println("o "+solid.id+"\n");
 			
 			for (Vector3 e : uniqueVerticiesList) {
-				outfile.println("v " + e.x +" "+ e.y +" "+ e.z);
+				objFile.println("v " + e.x +" "+ e.y +" "+ e.z);
 			}
+
 			
-			//outfile.println("\n" + 
-			//		"#64x64@0.25\n" + 
-			//		"vt 0.000000 1.000000\n" + 
-			//		"vt 36.000000 1.000000\n" + 
-			//		"vt 36.000000 -35.000000\n" + 
-			//		"vt 0.000000 -35.000000\n" + 
-			//		"\n" + 
-			//		"vn 0.000000 1.000000 0.000000\n" +
-			//		"s off\n");
-			outfile.println();
+			for (String el : uniqueMaterialsList) {
+				el = el.toLowerCase();
+				
+				// Read File
+				String VMTText = "";
+				try {
+					int index = getEntryIndexByPath(vpkMaterials, "materials/"+el+".vmt");
+					VMTText = new String(vpkMaterials.get(index).readData());
+				}catch (IOException e) {
+					System.out.println("Exception Occured: " + e.toString());
+				}
+
+				VMT vmt = parseVMT(VMTText);
+				vmt.name = el;
+				//System.out.println(gson.toJson(vmt));
+				//System.out.println(vmt.basetexture);
+				int index = getEntryIndexByPath(vpkMaterials, "materials/"+vmt.basetexture+".vtf");
+				//System.out.println(index);
+				if (index != -1){
+					File materialOutPath = new File(outPath);
+					materialOutPath = new File(formatPath(materialOutPath.getParent()+File.separator+vpkMaterials.get(index).getFullPath()));
+					if (!materialOutPath.exists()) {
+						try {
+							File directory = new File(materialOutPath.getParent());
+							if (!directory.exists()) {
+								directory.mkdirs();
+							}
+						} catch (Exception e) {
+							System.out.println("Exception Occured: " + e.toString());
+						}
+						try {
+							vpkMaterials.get(index).extract(materialOutPath);
+							String[] command = new String[] {
+								VTFLibPath,
+								"-folder", formatPath(materialOutPath.toString()),
+								"-output", formatPath(materialOutPath.getParent()),
+								"-exportformat", "tga"};
+						
+								proc = Runtime.getRuntime().exec(command);
+								proc.waitFor();
+								//materialOutPath.delete();
+								materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
+								
+								int width = 1;
+								int height = 1;
+								try {
+									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+									BufferedImage bimg = TargaReader.decode(fileContent);
+									width = bimg.getWidth();
+									height = bimg.getHeight();
+								}
+								catch (Exception e) {
+									System.out.println("Cant read Material: "+ materialOutPath);
+									//System.out.println(e);
+								}
+								//System.out.println("Adding Material: "+ el);
+								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),width,height));
+						}
+						catch (Exception e) {
+							System.err.println("Exception on extract: "+e);
+						}
+						materialFile.println("\n" + 
+						"newmtl "+el+"\n"+
+						"Ka 1.000 1.000 1.000\n"+
+						"Kd 1.000 1.000 1.000\n"+
+						"Ks 0.000 0.000 0.000\n"+
+						"d 1.0\n"+
+						"illum 2\n"+
+						"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+						"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
+						"map_Ks "+"materials/"+vmt.basetexture+".tga");
+						materialFile.println();
+					}
+					else { //File has already been extracted
+						int textureIndex = getTextureIndexByName(textures,el);
+						if (textureIndex == -1) //But this is a new material
+						{
+							textureIndex = getTextureIndexByFileName(textures,vmt.basetexture);
+							//System.out.println("Adding Material: "+ el);
+							textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
+							
+							materialFile.println("\n" + 
+							"newmtl "+el+"\n"+
+							"Ka 1.000 1.000 1.000\n"+
+							"Kd 1.000 1.000 1.000\n"+
+							"Ks 0.000 0.000 0.000\n"+
+							"d 1.0\n"+
+							"illum 2\n"+
+							"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+							"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
+							"map_Ks "+"materials/"+vmt.basetexture+".tga");
+							materialFile.println();
+						}
+					}
+				}
+				else { //Cant find material
+					int textureIndex = getTextureIndexByName(textures,el);
+					if (textureIndex == -1) //But this is a new material
+					{
+						System.out.println("Missing Material: "+ vmt.basetexture);
+						textures.add(new Texture(el,vmt.basetexture,"",1,1));
+					}
+				}
+			}
+			objFile.println();
+			
+			for (Side side : solid.sides)
+			{
+				//if (side.material.contains("TOOLS/")){continue;}
+				Texture texture = textures.get(getTextureIndexByName(textures,side.material));
+
+				side.uAxisTranslation = side.uAxisTranslation % texture.width;
+				side.vAxisTranslation = side.vAxisTranslation % texture.height;
+
+				if (side.uAxisTranslation < -texture.width / 2)
+				{
+					side.uAxisTranslation += texture.width;
+				}
+
+				if (side.vAxisTranslation < -texture.height / 2)
+				{
+					side.vAxisTranslation += texture.height;
+				}
+
+				String buffer = "";
+				for (int i = 0; i < side.points.length; i++)
+				{
+					double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+					double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+					objFile.println("vt "+u+" "+v);
+					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+				}
+				faces.add(buffer);
+				vertexTextureOffset += side.points.length;
+			}
+			objFile.println();
+			vertexOffset += uniqueVerticiesList.size();
 			
 
-			for (String element : faces) {
-				outfile.println("f " + element);
+			for (int i = 0; i < faces.size(); i++) {
+				objFile.println("usemtl " + solid.sides[i].material.toLowerCase());
+				objFile.println("f " + faces.get(i));
 			}
 		}
 		
 		in.close();
-		outfile.close();
-		materialfile.close();
+		objFile.close();
+		materialFile.close();
 
 	}
 }

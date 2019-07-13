@@ -472,6 +472,15 @@ public class App {
 		}
 		return -1;
 	}
+	public static int getTextureIndexByName(ArrayList<Texture> object, String name) {
+		for (int i = 0; i < object.size(); i++) {
+				if (object !=null && object.get(i).name.equalsIgnoreCase(name)) {
+						return i;
+				}
+		}
+		return -1;
+	}
+
 
 	public static void main(String args[]) throws Exception{
 		// Read Geometry
@@ -579,6 +588,7 @@ public class App {
 		ArrayList<String> faces = new ArrayList<String>();
 
 		ArrayList<String> materials = new ArrayList<String>();
+		ArrayList<Texture> textures = new ArrayList<Texture>();
 		int vertexOffset = 1;
 		int vertexTextureOffset = 1;
 		System.out.println("[3/?] Writing faces...");
@@ -609,6 +619,7 @@ public class App {
 
 			Set<String> uniqueMaterials = new HashSet<String>(materials);
 			ArrayList<String> uniqueMaterialsList = new ArrayList<String>(uniqueMaterials);
+			
 			
 			//Write Faces
 			
@@ -648,6 +659,21 @@ public class App {
 								proc.waitFor();
 								//materialOutPath.delete();
 								materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
+								
+								int width = 1;
+								int height = 1;
+								try {
+									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+									BufferedImage bimg = TargaReader.decode(fileContent);
+									width = bimg.getWidth();
+									height = bimg.getHeight();
+								}
+								catch (Exception e) {
+									System.out.println("Cant read Material: "+ materialOutPath);
+									//System.out.println(e);
+								}
+								//System.out.println("Adding Material:"+ el);
+								textures.add(new Texture(el,materialOutPath.toString(),width,height));
 						}
 						catch (Exception e) {
 							System.err.println("Exception on extract: "+e);
@@ -659,62 +685,42 @@ public class App {
 						"Ks 0.000 0.000 0.000\n"+
 						"d 1.0\n"+
 						"illum 2\n"+
-						"map_Ka "+materialOutPath+"\n"+
-						"map_Kd "+materialOutPath+"\n"+
-						"map_Ks "+materialOutPath+"\n");
+						"map_Ka "+"materials/"+el+".tga"+"\n"+
+						"map_Kd "+"materials/"+el+".tga"+"\n"+
+						"map_Ks "+"materials/"+el+".tga"+"\n");
 						materialFile.println();
 					}
 				}
 				else {
-					System.out.println("Missing Material:"+ el);
+					System.out.println("Missing Material: "+ el);
+					textures.add(new Texture(el,"",1,1));
 				}
 			}
-			
-			//objFile.println("\n" + 
-			//		"#64x64@0.25\n" + 
-			//		"vt 0.000000 1.000000\n" + 
-			//		"vt 36.000000 1.000000\n" + 
-			//		"vt 36.000000 -35.000000\n" + 
-			//		"vt 0.000000 -35.000000\n");
 			objFile.println();
 			
 			for (Side side : solid.sides)
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
-				File materialOutPath = new File(Paths.get(outPath).getParent().resolve("materials").toString());
-				Path materialPath = Paths.get(materialOutPath.toString()+File.separator+side.material.toLowerCase()+".tga");
-				
-				int width = 1;
-				int height = 1;
-				try {
-					byte[] fileContent = Files.readAllBytes(materialPath);
-					BufferedImage bimg = TargaReader.decode(fileContent);
-					width = bimg.getWidth();
-					height = bimg.getHeight();
-				}
-				catch (Exception e) {
-					System.out.println("Cant read Material: "+ materialPath);
-					//System.out.println(e);
-				}
+				Texture texture = textures.get(getTextureIndexByName(textures,side.material));
 
-				side.uAxisTranslation = side.uAxisTranslation % width;
-				side.vAxisTranslation = side.vAxisTranslation % height;
+				side.uAxisTranslation = side.uAxisTranslation % texture.width;
+				side.vAxisTranslation = side.vAxisTranslation % texture.height;
 
-				if (side.uAxisTranslation < -width / 2)
+				if (side.uAxisTranslation < -texture.width / 2)
 				{
-					side.uAxisTranslation += width;
+					side.uAxisTranslation += texture.width;
 				}
 
-				if (side.vAxisTranslation < -height / 2)
+				if (side.vAxisTranslation < -texture.height / 2)
 				{
-					side.vAxisTranslation += height;
+					side.vAxisTranslation += texture.height;
 				}
 
 				String buffer = "";
 				for (int i = 0; i < side.points.length; i++)
 				{
-					double u = Vector3.dot(side.points[i], side.uAxisVector) / (width * side.uAxisScale) + side.uAxisTranslation / width;
-					double v = Vector3.dot(side.points[i], side.vAxisVector) / (height * side.vAxisScale) + side.vAxisTranslation / height;
+					double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+					double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
 					objFile.println("vt "+u+" "+v);
 					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
 				}

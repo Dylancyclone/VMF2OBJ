@@ -16,7 +16,7 @@ This project packages the following software and uses them during the conversion
 
 ## TODO
 
-Process
+### Process
 - [X] Read Brush Geometry
     - [X] Deserialize data
     - [X] Complete data (three points make a *bounded* plane)
@@ -25,9 +25,9 @@ Process
     - [X] ~~Per object or collapsed?~~ Per object, but may add option later
 - [ ] Extract Models
     - [ ] VPK integration
-- [ ] Extract materials
+- [X] Extract materials
     - [X] Basic VTFs
-    - [ ] VMTs (blends etc)
+    - [X] VMTs (blends etc)
 - [X] Convert Materials
     - [X] VTFLib?
 - [ ] Convert models to SMD
@@ -37,7 +37,7 @@ Process
 - [ ] Write Models
 - [ ] Write Materials
 
-Support
+### Support
 - [ ] Brushes
     - [X] Regular
     - [X] Irregular
@@ -45,10 +45,20 @@ Support
         - [X] From VPK
         - [ ] From external source (i.e decompiled map)
         - [X] Basic VTFs
-        - [ ] VMTs (blends etc)
+        - [ ] VMTs
+            - [X] Basic
+            - [ ] Advanced (see below)
 - [ ] Displacements
 - [X] Brush entities
 - [ ] Point Entities
 - [ ] Models
     - [ ] Geometry
     - [ ] Textures
+
+### Advanced VMT Support
+After getting basic VMT support (support for the $basetexture tag), it might be worth looking implementing the other features of a VMT. These would be looked into waayy down the line though, as I consider them extra features
+
+- [ ] $bumpmap
+- [ ] $detail
+	- [ ] $detailscale
+	- [ ] $detailblendfactor

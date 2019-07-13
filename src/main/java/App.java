@@ -9,7 +9,6 @@ import java.nio.file.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.awt.image.BufferedImage;
-import javax.imageio.*;
 
 public class App {
 
@@ -219,6 +218,59 @@ public class App {
 
 		VMF vmf = gson.fromJson(text, VMF.class);
 		return vmf;
+	}
+
+	public static VMT parseVMT(String text) {
+
+		if (text.substring(1,6).equals("Water")) // If water texture
+		{
+			//Water is weird. It doesn't really have a displayable texture other than a normal map,
+			//which shouldn't really be used anyways in this case. So we'll give it an obvious texture
+			//So it can be easily changed
+			VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+			return vmt;
+		}
+
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[^\"]*\")";
+		String cleanUpRegex = ",([}\\]])";
+
+		//Holy moly do I wish Valve was consistant in their kv files.
+		//All the following are just to format the file correctly.
+
+		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
+		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
+		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("srgb\\?", ""); // Remove all weirdos
+		text = text.replaceAll("-dx10", ""); // Remove all dx10 fallback textures
+		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
+		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
+		text = text.replaceAll("\\$", ""); // Remove all key prefixes
+		text = text.replaceAll("\"%.+", ""); // Remove all lines with keys that start with percentage signs
+		//text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
+		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
+		text = text.replaceAll("\" +\"", "\"\""); // Remove all whitespaces and newlines not in quotes
+		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
+		
+		Pattern bracketPattern = Pattern.compile("\\{");
+		Matcher bracketMatcher = bracketPattern.matcher(text);
+		if (bracketMatcher.find()) {
+			int startIndex = bracketMatcher.end()-1;
+			int endIndex = findClosingBracketMatchIndex(text,startIndex);
+			if (endIndex == -1) // Invalid vmt
+			{
+				VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+				return vmt;
+			}
+			text = text.substring(startIndex,endIndex+1);
+
+			text = text.replaceAll(keyValueRegex,"$1:$2,");
+			text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+		}
+		text=text.toLowerCase();
+
+		//System.out.println(text);
+		VMT vmt = gson.fromJson(text, VMT.class);
+		return vmt;
 	}
 
 	
@@ -465,18 +517,26 @@ public class App {
 
 	public static int getEntryIndexByPath(ArrayList<Entry> object, String path) {
 		for (int i = 0; i < object.size(); i++) {
-				if (object !=null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
-						return i;
-				}
-				//else{System.out.println(object.get(i).getFullPath());}
+			if (object !=null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
+				return i;
+			}
+			//else{System.out.println(object.get(i).getFullPath());}
 		}
 		return -1;
 	}
 	public static int getTextureIndexByName(ArrayList<Texture> object, String name) {
 		for (int i = 0; i < object.size(); i++) {
-				if (object !=null && object.get(i).name.equalsIgnoreCase(name)) {
-						return i;
-				}
+			if (object !=null && object.get(i).name.equalsIgnoreCase(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	public static int getTextureIndexByFileName(ArrayList<Texture> object, String name) {
+		for (int i = 0; i < object.size(); i++) {
+			if (object !=null && object.get(i).fileName.equalsIgnoreCase(name)) {
+				return i;
+			}
 		}
 		return -1;
 	}
@@ -632,8 +692,22 @@ public class App {
 
 			
 			for (String el : uniqueMaterialsList) {
-				//System.out.println(el);
-				int index = getEntryIndexByPath(vpkMaterials, "materials/"+el+".vtf"); //TODO: Only basic vtf
+				el = el.toLowerCase();
+				
+				// Read File
+				String VMTText = "";
+				try {
+					int index = getEntryIndexByPath(vpkMaterials, "materials/"+el+".vmt");
+					VMTText = new String(vpkMaterials.get(index).readData());
+				}catch (IOException e) {
+					System.out.println("Exception Occured: " + e.toString());
+				}
+
+				VMT vmt = parseVMT(VMTText);
+				vmt.name = el;
+				//System.out.println(gson.toJson(vmt));
+				//System.out.println(vmt.basetexture);
+				int index = getEntryIndexByPath(vpkMaterials, "materials/"+vmt.basetexture+".vtf");
 				//System.out.println(index);
 				if (index != -1){
 					File materialOutPath = new File(outPath);
@@ -672,8 +746,8 @@ public class App {
 									System.out.println("Cant read Material: "+ materialOutPath);
 									//System.out.println(e);
 								}
-								//System.out.println("Adding Material:"+ el);
-								textures.add(new Texture(el,materialOutPath.toString(),width,height));
+								//System.out.println("Adding Material: "+ el);
+								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),width,height));
 						}
 						catch (Exception e) {
 							System.err.println("Exception on extract: "+e);
@@ -685,15 +759,40 @@ public class App {
 						"Ks 0.000 0.000 0.000\n"+
 						"d 1.0\n"+
 						"illum 2\n"+
-						"map_Ka "+"materials/"+el+".tga"+"\n"+
-						"map_Kd "+"materials/"+el+".tga"+"\n"+
-						"map_Ks "+"materials/"+el+".tga"+"\n");
+						"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+						"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
+						"map_Ks "+"materials/"+vmt.basetexture+".tga");
 						materialFile.println();
 					}
+					else { //File has already been extracted
+						int textureIndex = getTextureIndexByName(textures,el);
+						if (textureIndex == -1) //But this is a new material
+						{
+							textureIndex = getTextureIndexByFileName(textures,vmt.basetexture);
+							//System.out.println("Adding Material: "+ el);
+							textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
+							
+							materialFile.println("\n" + 
+							"newmtl "+el+"\n"+
+							"Ka 1.000 1.000 1.000\n"+
+							"Kd 1.000 1.000 1.000\n"+
+							"Ks 0.000 0.000 0.000\n"+
+							"d 1.0\n"+
+							"illum 2\n"+
+							"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+							"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
+							"map_Ks "+"materials/"+vmt.basetexture+".tga");
+							materialFile.println();
+						}
+					}
 				}
-				else {
-					System.out.println("Missing Material: "+ el);
-					textures.add(new Texture(el,"",1,1));
+				else { //Cant find material
+					int textureIndex = getTextureIndexByName(textures,el);
+					if (textureIndex == -1) //But this is a new material
+					{
+						System.out.println("Missing Material: "+ vmt.basetexture);
+						textures.add(new Texture(el,vmt.basetexture,"",1,1));
+					}
 				}
 			}
 			objFile.println();
@@ -732,7 +831,7 @@ public class App {
 			
 
 			for (int i = 0; i < faces.size(); i++) {
-				objFile.println("usemtl " + solid.sides[i].material);
+				objFile.println("usemtl " + solid.sides[i].material.toLowerCase());
 				objFile.println("f " + faces.get(i));
 			}
 		}

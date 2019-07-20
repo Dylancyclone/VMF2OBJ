@@ -110,6 +110,17 @@ public class App {
 			return (tempFile.toURI());
 	}
 
+	public static boolean deleteRecursive(File path) throws FileNotFoundException{
+		if (!path.exists()) throw new FileNotFoundException(path.getAbsolutePath());
+		boolean ret = true;
+		if (path.isDirectory()){
+				for (File f : path.listFiles()){
+						ret = ret && deleteRecursive(f);
+				}
+		}
+		return ret && path.delete();
+}
+
 	static String readFile(String path) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return new String(encoded, StandardCharsets.UTF_8);
@@ -162,9 +173,127 @@ public class App {
 					String side = solid.substring(sideStartIndex,sideEndIndex+1);
 	
 					solid = solid.replace(solid.substring(sideMatcher.start(),sideEndIndex+1),""); //snip this section
+
+					
+					String disps = "";
+					Pattern dispPattern = Pattern.compile("dispinfo");
+					Matcher dispMatcher = dispPattern.matcher(side);
+					while (dispMatcher.find()) {
+						if (side.charAt(dispMatcher.end()) == '{')
+						{
+							int dispStartIndex = dispMatcher.end();
+							int dispEndIndex = findClosingBracketMatchIndex(side,dispStartIndex);
+							String disp = side.substring(dispStartIndex,dispEndIndex+1);
+			
+							side = side.replace(side.substring(dispMatcher.start(),dispEndIndex+1),""); //snip this section
+
+							
+							String normals = "";
+							Pattern normalsPattern = Pattern.compile("normals");
+							Matcher normalsMatcher = normalsPattern.matcher(disp);
+							while (normalsMatcher.find()) {
+								if (disp.charAt(normalsMatcher.end()) == '{')
+								{
+									int normalStartIndex = normalsMatcher.end();
+									int normalEndIndex = findClosingBracketMatchIndex(disp,normalStartIndex);
+									String normal = disp.substring(normalStartIndex,normalEndIndex+1);
+					
+									disp = disp.replace(disp.substring(normalsMatcher.start(),normalEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(normal);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+										}
+										normals = normals + "["+vectors+"],";
+									}
+								}
+								normalsMatcher = normalsPattern.matcher(disp);
+							}
+							
+							String distances = "";
+							Pattern distancesPattern = Pattern.compile("distances");
+							Matcher distancesMatcher = distancesPattern.matcher(disp);
+							while (distancesMatcher.find()) {
+								if (disp.charAt(distancesMatcher.end()) == '{')
+								{
+									int distanceStartIndex = distancesMatcher.end();
+									int distanceEndIndex = findClosingBracketMatchIndex(disp,distanceStartIndex);
+									String distance = disp.substring(distanceStartIndex,distanceEndIndex+1);
+					
+									disp = disp.replace(disp.substring(distancesMatcher.start(),distanceEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(distance);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+										}
+										distances = distances + "["+vectors+"],";
+									}
+								}
+								distancesMatcher = distancesPattern.matcher(disp);
+							}
+							
+							String alphas = "";
+							Pattern alphasPattern = Pattern.compile("alphas");
+							Matcher alphasMatcher = alphasPattern.matcher(disp);
+							while (alphasMatcher.find()) {
+								if (disp.charAt(alphasMatcher.end()) == '{')
+								{
+									int alphaStartIndex = alphasMatcher.end();
+									int alphaEndIndex = findClosingBracketMatchIndex(disp,alphaStartIndex);
+									String alpha = disp.substring(alphaStartIndex,alphaEndIndex+1);
+					
+									disp = disp.replace(disp.substring(alphasMatcher.start(),alphaEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(alpha);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+										}
+										alphas = alphas + "["+vectors+"],";
+									}
+								}
+								alphasMatcher = alphasPattern.matcher(disp);
+							}
+
+							disp = disp.replaceAll(objectRegex,",\"$1\":$2");
+							disp = disp.replaceAll(keyValueRegex,"$1:$2,");
+							disp = disp.replaceAll(",,",",");
+							normals = ",\"normals\":["+normals.substring(0,normals.length()-1)+"]";
+							disp = splice(disp,normals,disp.length()-1);
+							distances = ",\"distances\":["+distances.substring(0,distances.length()-1)+"]";
+							disp = splice(disp,distances,disp.length()-1);
+							alphas = ",\"alphas\":["+alphas.substring(0,alphas.length()-1)+"]";
+							disp = splice(disp,alphas,disp.length()-1);
+							disp = disp.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+							disps = disp;
+							//System.out.println(disp);
+						}
+						dispMatcher = dispPattern.matcher(solid);
+					}
+
 					side = side.replaceAll(objectRegex,",\"$1\":$2");
 					side = side.replaceAll(keyValueRegex,"$1:$2,");
 					side = side.replaceAll(",,",",");
+					if (disps != "")
+					{
+						disps = "\"dispinfo\":"+disps.substring(0,disps.length()-1)+"}";
+						side = splice(side,disps,side.length()-1);
+					}
+					side = side.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
 					sides = sides+side+",";
 				}
 				sideMatcher = sidePattern.matcher(solid);
@@ -215,8 +344,10 @@ public class App {
 		}
 		text = "{"+text+solids+entities+"}";
 		text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+		System.out.println(text);
 
 		VMF vmf = gson.fromJson(text, VMF.class);
+		System.out.println(gson.toJson(vmf, VMF.class));
 		return vmf;
 	}
 
@@ -566,6 +697,16 @@ public class App {
 		String objName = outPath + ".obj";
 		String matLibName = outPath + ".mtl";
 		
+
+		//Clean working directory
+		try {
+			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("materials").toString()));
+		}
+		catch (Exception e) {
+			//System.err.println("Exception: "+e);
+		}
+
+		//Extract Libraries
 		try{
 			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
 		}

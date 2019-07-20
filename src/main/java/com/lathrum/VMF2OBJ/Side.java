@@ -18,5 +18,5 @@ public class Side {
 	public double vAxisTranslation;
 	public double vAxisScale;
 
-	public String rotation;
+	public Displacement dispinfo;
 }

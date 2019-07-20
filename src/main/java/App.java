@@ -1025,54 +1025,50 @@ public class App {
 								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
 								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
 								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
-							//double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							//double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							//u = -u + texture.width;
-							//v = -v + texture.height;
-							//objFile.println("vt "+u+" "+v);
-							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset)+" ";
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+							double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset)+" ";
 
 							point = side.points[0]
 								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
 								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
 								.add(side.dispinfo.normals[i+1][j].multiply(side.dispinfo.distances[i+1][j]));
-							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							//u = -u + texture.width;
-							//v = -v + texture.height;
-							//objFile.println("vt "+u+" "+v);
-							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+1)+" ";
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+1)+" ";
 
 							point = side.points[0]
 								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
 								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
 								.add(side.dispinfo.normals[i+1][j+1].multiply(side.dispinfo.distances[i+1][j+1]));
-							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							//u = -u + texture.width;
-							//v = -v + texture.height;
-							//objFile.println("vt "+u+" "+v);
-							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+2)+" ";
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+2)+" ";
 
 							point = side.points[0]
 								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
 								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
 								.add(side.dispinfo.normals[i][j+1].multiply(side.dispinfo.distances[i][j+1]));
-							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							//u = -u + texture.width;
-							//v = -v + texture.height;
-							//objFile.println("vt "+u+" "+v);
-							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+3)+" ";
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+3)+" ";
 
 							faces.add(new Face(buffer,side.material.toLowerCase()));
 						}
 					}
-					//vertexTextureOffset += side.dispinfo.normals.length*side.dispinfo.normals[0].length;
+				vertexTextureOffset += (side.dispinfo.normals.length-1)*(side.dispinfo.normals[0].length-1)*4;
 				}
 			}
 			objFile.println();

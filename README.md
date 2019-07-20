@@ -51,16 +51,22 @@ This project packages the following software and uses them during the conversion
 - [ ] Displacements
     - [X] Geometry
     - [ ] Textures
+        - [X] Regular VMT
+        - [ ] Blends
 - [X] Brush entities
 - [ ] Point Entities
 - [ ] Models
     - [ ] Geometry
     - [ ] Textures
 
-### Advanced VMT Support
-After getting basic VMT support (support for the $basetexture tag), it might be worth looking implementing the other features of a VMT. These would be looked into waayy down the line though, as I consider them extra features
+### Feature Wishlist
+Wow todo list after todo list after wishlist. This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
 
-- [ ] $bumpmap
-- [ ] $detail
-	- [ ] $detailscale
-	- [ ] $detailblendfactor
+- [ ] Collapse Vertex Textures
+- [ ] Collapse *almost* duplicate verticies
+- [ ] Sort faces by texture
+- [ ] Advanced VMT Support
+    - [ ] $bumpmap
+    - [ ] $detail
+        - [ ] $detailscale
+        - [ ] $detailblendfactor

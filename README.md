@@ -49,6 +49,8 @@ This project packages the following software and uses them during the conversion
             - [X] Basic
             - [ ] Advanced (see below)
 - [ ] Displacements
+    - [X] Geometry
+    - [ ] Textures
 - [X] Brush entities
 - [ ] Point Entities
 - [ ] Models

@@ -189,7 +189,7 @@ public class App {
 
 							
 							String normals = "";
-							Pattern normalsPattern = Pattern.compile("normals");
+							Pattern normalsPattern = Pattern.compile("(?<!offset_)normals"); //Match normals but not offset_normals
 							Matcher normalsMatcher = normalsPattern.matcher(disp);
 							while (normalsMatcher.find()) {
 								if (disp.charAt(normalsMatcher.end()) == '{')
@@ -231,10 +231,10 @@ public class App {
 									Matcher rowsMatcher = rowsPattern.matcher(distance);
 									while (rowsMatcher.find()) {
 										String vectors = "";
-										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.-]+)");
 										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
 										while (vectorMatcher.find()) {
-											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+											vectors = vectors + Double.parseDouble(vectorMatcher.group(1))+",";
 										}
 										distances = distances + "["+vectors+"],";
 									}
@@ -258,10 +258,10 @@ public class App {
 									Matcher rowsMatcher = rowsPattern.matcher(alpha);
 									while (rowsMatcher.find()) {
 										String vectors = "";
-										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.-]+)");
 										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
 										while (vectorMatcher.find()) {
-											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+											vectors = vectors + Double.parseDouble(vectorMatcher.group(1))+",";
 										}
 										alphas = alphas + "["+vectors+"],";
 									}
@@ -344,10 +344,8 @@ public class App {
 		}
 		text = "{"+text+solids+entities+"}";
 		text = text.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
-		System.out.println(text);
 
 		VMF vmf = gson.fromJson(text, VMF.class);
-		System.out.println(gson.toJson(vmf, VMF.class));
 		return vmf;
 	}
 
@@ -646,6 +644,15 @@ public class App {
     return true;
 	}
 
+	public static boolean isDisplacementSolid(Solid solid) {
+		for (Side side : solid.sides) {
+			if (side.dispinfo != null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static int getEntryIndexByPath(ArrayList<Entry> object, String path) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object !=null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
@@ -786,7 +793,7 @@ public class App {
 		//System.out.println(gson.toJson(vmf));
 
 		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
-		ArrayList<String> faces = new ArrayList<String>();
+		ArrayList<Face> faces = new ArrayList<Face>();
 
 		ArrayList<String> materials = new ArrayList<String>();
 		ArrayList<Texture> textures = new ArrayList<Texture>();
@@ -807,10 +814,36 @@ public class App {
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
 				materials.add(side.material);
-				for (Vector3 point : side.points)
+				if (side.dispinfo == null) {
+					if (isDisplacementSolid(solid)) continue;
+					for (Vector3 point : side.points)
+					{
+						verticies.add(point);
+					}
+				}
+				else
 				{
-					//System.out.println(point);
-					verticies.add(point);
+					//Points are defined in this order:
+					// 1  4
+					// 2  3
+					// -or-
+					// A  D
+					// B  C
+					Vector3 ad = side.points[3].subtract(side.points[0]);
+					Vector3 ab = side.points[1].subtract(side.points[0]);
+					//System.out.println(ad);
+					//System.out.println(ab);
+					for (int i = 0; i < side.dispinfo.normals.length; i++) //rows
+					{
+						for (int j = 0; j < side.dispinfo.normals[0].length; j++) //columns
+						{
+							Vector3 point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+							verticies.add(point);
+						}
+					}
 				}
 			}
 			
@@ -957,25 +990,103 @@ public class App {
 				}
 
 				String buffer = "";
-				for (int i = 0; i < side.points.length; i++)
+				
+				if (side.dispinfo == null)
 				{
-					double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-					double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-					u = -u + texture.width;
-					v = -v + texture.height;
-					objFile.println("vt "+u+" "+v);
-					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+					if (isDisplacementSolid(solid)) continue;
+					for (int i = 0; i < side.points.length; i++)
+					{
+						double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+						double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+						u = -u + texture.width;
+						v = -v + texture.height;
+						objFile.println("vt "+u+" "+v);
+						buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+					}
+					faces.add(new Face(buffer,side.material.toLowerCase()));
+					vertexTextureOffset += side.points.length;
 				}
-				faces.add(buffer);
-				vertexTextureOffset += side.points.length;
+				else
+				{
+					//Points are defined in this order:
+					// 1  4
+					// 2  3
+					// -or-
+					// A  D
+					// B  C
+					Vector3 ad = side.points[3].subtract(side.points[0]);
+					Vector3 ab = side.points[1].subtract(side.points[0]);
+					for (int i = 0; i < side.dispinfo.normals.length-1; i++) //all rows but last
+					{
+						for (int j = 0; j < side.dispinfo.normals[0].length-1; j++) //all columns but last
+						{
+							buffer = "";
+							Vector3 point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+							//double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							//double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							//u = -u + texture.width;
+							//v = -v + texture.height;
+							//objFile.println("vt "+u+" "+v);
+							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset)+" ";
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+								.add(side.dispinfo.normals[i+1][j].multiply(side.dispinfo.distances[i+1][j]));
+							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							//u = -u + texture.width;
+							//v = -v + texture.height;
+							//objFile.println("vt "+u+" "+v);
+							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+1)+" ";
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+								.add(side.dispinfo.normals[i+1][j+1].multiply(side.dispinfo.distances[i+1][j+1]));
+							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							//u = -u + texture.width;
+							//v = -v + texture.height;
+							//objFile.println("vt "+u+" "+v);
+							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+2)+" ";
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j+1].multiply(side.dispinfo.distances[i][j+1]));
+							//u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							//v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							//u = -u + texture.width;
+							//v = -v + texture.height;
+							//objFile.println("vt "+u+" "+v);
+							//buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+(i*j+j+vertexTextureOffset+3)+" ";
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset)+" ";
+
+							faces.add(new Face(buffer,side.material.toLowerCase()));
+						}
+					}
+					//vertexTextureOffset += side.dispinfo.normals.length*side.dispinfo.normals[0].length;
+				}
 			}
 			objFile.println();
 			vertexOffset += uniqueVerticiesList.size();
 			
-
+			String lastMaterial = "";
 			for (int i = 0; i < faces.size(); i++) {
-				objFile.println("usemtl " + solid.sides[i].material.toLowerCase());
-				objFile.println("f " + faces.get(i));
+				if (!faces.get(i).material.equals(lastMaterial))
+				{
+					objFile.println("usemtl " + faces.get(i).material);
+				}
+				lastMaterial = faces.get(i).material;
+
+				objFile.println("f " + faces.get(i).text);
 			}
 		}
 		

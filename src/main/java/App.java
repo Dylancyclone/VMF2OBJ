@@ -820,6 +820,8 @@ public class App {
 				{
 					double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
 					double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+					u = -u + texture.width;
+					v = -v + texture.height;
 					objFile.println("vt "+u+" "+v);
 					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
 				}

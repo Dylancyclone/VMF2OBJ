@@ -110,6 +110,17 @@ public class App {
 			return (tempFile.toURI());
 	}
 
+	public static boolean deleteRecursive(File path) throws FileNotFoundException{
+		if (!path.exists()) throw new FileNotFoundException(path.getAbsolutePath());
+		boolean ret = true;
+		if (path.isDirectory()){
+				for (File f : path.listFiles()){
+						ret = ret && deleteRecursive(f);
+				}
+		}
+		return ret && path.delete();
+}
+
 	static String readFile(String path) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return new String(encoded, StandardCharsets.UTF_8);
@@ -162,9 +173,127 @@ public class App {
 					String side = solid.substring(sideStartIndex,sideEndIndex+1);
 	
 					solid = solid.replace(solid.substring(sideMatcher.start(),sideEndIndex+1),""); //snip this section
+
+					
+					String disps = "";
+					Pattern dispPattern = Pattern.compile("dispinfo");
+					Matcher dispMatcher = dispPattern.matcher(side);
+					while (dispMatcher.find()) {
+						if (side.charAt(dispMatcher.end()) == '{')
+						{
+							int dispStartIndex = dispMatcher.end();
+							int dispEndIndex = findClosingBracketMatchIndex(side,dispStartIndex);
+							String disp = side.substring(dispStartIndex,dispEndIndex+1);
+			
+							side = side.replace(side.substring(dispMatcher.start(),dispEndIndex+1),""); //snip this section
+
+							
+							String normals = "";
+							Pattern normalsPattern = Pattern.compile("(?<!offset_)normals"); //Match normals but not offset_normals
+							Matcher normalsMatcher = normalsPattern.matcher(disp);
+							while (normalsMatcher.find()) {
+								if (disp.charAt(normalsMatcher.end()) == '{')
+								{
+									int normalStartIndex = normalsMatcher.end();
+									int normalEndIndex = findClosingBracketMatchIndex(disp,normalStartIndex);
+									String normal = disp.substring(normalStartIndex,normalEndIndex+1);
+					
+									disp = disp.replace(disp.substring(normalsMatcher.start(),normalEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(normal);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("([0-9.-]+) ([0-9.-]+) ([0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + "{\"x\":"+Double.parseDouble(vectorMatcher.group(1))+",\"y\":"+Double.parseDouble(vectorMatcher.group(2))+",\"z\":"+Double.parseDouble(vectorMatcher.group(3))+"},";
+										}
+										normals = normals + "["+vectors+"],";
+									}
+								}
+								normalsMatcher = normalsPattern.matcher(disp);
+							}
+							
+							String distances = "";
+							Pattern distancesPattern = Pattern.compile("distances");
+							Matcher distancesMatcher = distancesPattern.matcher(disp);
+							while (distancesMatcher.find()) {
+								if (disp.charAt(distancesMatcher.end()) == '{')
+								{
+									int distanceStartIndex = distancesMatcher.end();
+									int distanceEndIndex = findClosingBracketMatchIndex(disp,distanceStartIndex);
+									String distance = disp.substring(distanceStartIndex,distanceEndIndex+1);
+					
+									disp = disp.replace(disp.substring(distancesMatcher.start(),distanceEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(distance);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + Double.parseDouble(vectorMatcher.group(1))+",";
+										}
+										distances = distances + "["+vectors+"],";
+									}
+								}
+								distancesMatcher = distancesPattern.matcher(disp);
+							}
+							
+							String alphas = "";
+							Pattern alphasPattern = Pattern.compile("alphas");
+							Matcher alphasMatcher = alphasPattern.matcher(disp);
+							while (alphasMatcher.find()) {
+								if (disp.charAt(alphasMatcher.end()) == '{')
+								{
+									int alphaStartIndex = alphasMatcher.end();
+									int alphaEndIndex = findClosingBracketMatchIndex(disp,alphaStartIndex);
+									String alpha = disp.substring(alphaStartIndex,alphaEndIndex+1);
+					
+									disp = disp.replace(disp.substring(alphasMatcher.start(),alphaEndIndex+1),""); //snip this section
+									
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.-]+ ?)+)\"");
+									Matcher rowsMatcher = rowsPattern.matcher(alpha);
+									while (rowsMatcher.find()) {
+										String vectors = "";
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.-]+)");
+										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
+										while (vectorMatcher.find()) {
+											vectors = vectors + Double.parseDouble(vectorMatcher.group(1))+",";
+										}
+										alphas = alphas + "["+vectors+"],";
+									}
+								}
+								alphasMatcher = alphasPattern.matcher(disp);
+							}
+
+							disp = disp.replaceAll(objectRegex,",\"$1\":$2");
+							disp = disp.replaceAll(keyValueRegex,"$1:$2,");
+							disp = disp.replaceAll(",,",",");
+							normals = ",\"normals\":["+normals.substring(0,normals.length()-1)+"]";
+							disp = splice(disp,normals,disp.length()-1);
+							distances = ",\"distances\":["+distances.substring(0,distances.length()-1)+"]";
+							disp = splice(disp,distances,disp.length()-1);
+							alphas = ",\"alphas\":["+alphas.substring(0,alphas.length()-1)+"]";
+							disp = splice(disp,alphas,disp.length()-1);
+							disp = disp.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
+							disps = disp;
+							//System.out.println(disp);
+						}
+						dispMatcher = dispPattern.matcher(solid);
+					}
+
 					side = side.replaceAll(objectRegex,",\"$1\":$2");
 					side = side.replaceAll(keyValueRegex,"$1:$2,");
 					side = side.replaceAll(",,",",");
+					if (disps != "")
+					{
+						disps = "\"dispinfo\":"+disps.substring(0,disps.length()-1)+"}";
+						side = splice(side,disps,side.length()-1);
+					}
+					side = side.replaceAll(cleanUpRegex,"$1"); //remove commas at the end of a list
 					sides = sides+side+",";
 				}
 				sideMatcher = sidePattern.matcher(solid);
@@ -515,6 +644,15 @@ public class App {
     return true;
 	}
 
+	public static boolean isDisplacementSolid(Solid solid) {
+		for (Side side : solid.sides) {
+			if (side.dispinfo != null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static int getEntryIndexByPath(ArrayList<Entry> object, String path) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object !=null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
@@ -566,6 +704,16 @@ public class App {
 		String objName = outPath + ".obj";
 		String matLibName = outPath + ".mtl";
 		
+
+		//Clean working directory
+		try {
+			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("materials").toString()));
+		}
+		catch (Exception e) {
+			//System.err.println("Exception: "+e);
+		}
+
+		//Extract Libraries
 		try{
 			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
 		}
@@ -645,7 +793,7 @@ public class App {
 		//System.out.println(gson.toJson(vmf));
 
 		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
-		ArrayList<String> faces = new ArrayList<String>();
+		ArrayList<Face> faces = new ArrayList<Face>();
 
 		ArrayList<String> materials = new ArrayList<String>();
 		ArrayList<Texture> textures = new ArrayList<Texture>();
@@ -666,10 +814,36 @@ public class App {
 			{
 				//if (side.material.contains("TOOLS/")){continue;}
 				materials.add(side.material);
-				for (Vector3 point : side.points)
+				if (side.dispinfo == null) {
+					if (isDisplacementSolid(solid)) continue;
+					for (Vector3 point : side.points)
+					{
+						verticies.add(point);
+					}
+				}
+				else
 				{
-					//System.out.println(point);
-					verticies.add(point);
+					//Points are defined in this order:
+					// 1  4
+					// 2  3
+					// -or-
+					// A  D
+					// B  C
+					Vector3 ad = side.points[3].subtract(side.points[0]);
+					Vector3 ab = side.points[1].subtract(side.points[0]);
+					//System.out.println(ad);
+					//System.out.println(ab);
+					for (int i = 0; i < side.dispinfo.normals.length; i++) //rows
+					{
+						for (int j = 0; j < side.dispinfo.normals[0].length; j++) //columns
+						{
+							Vector3 point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+							verticies.add(point);
+						}
+					}
 				}
 			}
 			
@@ -816,25 +990,99 @@ public class App {
 				}
 
 				String buffer = "";
-				for (int i = 0; i < side.points.length; i++)
+				
+				if (side.dispinfo == null)
 				{
-					double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-					double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-					u = -u + texture.width;
-					v = -v + texture.height;
-					objFile.println("vt "+u+" "+v);
-					buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+					if (isDisplacementSolid(solid)) continue;
+					for (int i = 0; i < side.points.length; i++)
+					{
+						double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+						double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+						u = -u + texture.width;
+						v = -v + texture.height;
+						objFile.println("vt "+u+" "+v);
+						buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+					}
+					faces.add(new Face(buffer,side.material.toLowerCase()));
+					vertexTextureOffset += side.points.length;
 				}
-				faces.add(buffer);
-				vertexTextureOffset += side.points.length;
+				else
+				{
+					//Points are defined in this order:
+					// 1  4
+					// 2  3
+					// -or-
+					// A  D
+					// B  C
+					Vector3 ad = side.points[3].subtract(side.points[0]);
+					Vector3 ab = side.points[1].subtract(side.points[0]);
+					for (int i = 0; i < side.dispinfo.normals.length-1; i++) //all rows but last
+					{
+						for (int j = 0; j < side.dispinfo.normals[0].length-1; j++) //all columns but last
+						{
+							buffer = "";
+							Vector3 point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+							double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+								.add(side.dispinfo.normals[i+1][j].multiply(side.dispinfo.distances[i+1][j]));
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+1)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+								.add(side.dispinfo.normals[i+1][j+1].multiply(side.dispinfo.distances[i+1][j+1]));
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+2)+" ";
+
+							point = side.points[0]
+								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+								.add(side.dispinfo.normals[i][j+1].multiply(side.dispinfo.distances[i][j+1]));
+							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+3)+" ";
+
+							faces.add(new Face(buffer,side.material.toLowerCase()));
+						}
+					}
+				vertexTextureOffset += (side.dispinfo.normals.length-1)*(side.dispinfo.normals[0].length-1)*4;
+				}
 			}
 			objFile.println();
 			vertexOffset += uniqueVerticiesList.size();
 			
-
+			String lastMaterial = "";
 			for (int i = 0; i < faces.size(); i++) {
-				objFile.println("usemtl " + solid.sides[i].material.toLowerCase());
-				objFile.println("f " + faces.get(i));
+				if (!faces.get(i).material.equals(lastMaterial))
+				{
+					objFile.println("usemtl " + faces.get(i).material);
+				}
+				lastMaterial = faces.get(i).material;
+
+				objFile.println("f " + faces.get(i).text);
 			}
 		}
 		

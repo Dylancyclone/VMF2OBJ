@@ -100,6 +100,26 @@ public class Vector3 {
 	}
 
 	
+	public static Vector3 abs(Vector3 vector) {
+		if (vector.x < 0)
+			vector.x = -vector.x;
+		if (vector.y < 0)
+			vector.y = -vector.y;
+		if (vector.z < 0)
+			vector.z = -vector.z;
+		return vector;
+	}
+	public Vector3 abs() {
+		if (this.x < 0)
+			this.x = -this.x;
+		if (this.y < 0)
+			this.y = -this.y;
+		if (this.z < 0)
+			this.z = -this.z;
+		return this;
+	}
+
+	
 	public static Vector3 cross(Vector3 vectorA, Vector3 vectorB) {
 		return new Vector3(
 			vectorA.y * vectorB.z - vectorA.z * vectorB.y,

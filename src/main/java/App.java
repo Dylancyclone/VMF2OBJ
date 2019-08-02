@@ -15,6 +15,7 @@ public class App {
 	public static Gson gson = new Gson();
 	public static Process proc;
 	public static String VTFLibPath;
+	public static String CrowbarLibPath;
 
 	public static void extractLibraries(String dir) throws URISyntaxException {
 		//Spooky scary, but I don't want to reinvent the wheel.
@@ -25,10 +26,15 @@ public class App {
 
 		//VTFLIB
 		//http://nemesis.thewavelength.net/index.php?p=40
-		//For converting VTF file to TGA files
+		//For converting VTF files to TGA files
 		files.add("DevIL.dll"); //VTFLib dependency
 		files.add("VTFLib.dll"); //VTFLib dependency
 		files.add("VTFCmd.exe"); //VTFLib itself
+		//Crowbar
+		//https://steamcommunity.com/groups/CrowbarTool
+		//https://github.com/UltraTechX/Crowbar-Command-Line
+		//For converting MDL files to SMD files
+		files.add("CrowbarCommandLineDecomp.exe"); //Crowbar itself
 
 		URI uri = new URI("");
 		URI fileURI;
@@ -54,6 +60,9 @@ public class App {
 					switch (el){
 						case ("VTFCmd.exe"):
 							VTFLibPath = Paths.get(fileURI).toString();
+							break;
+						case ("CrowbarCommandLineDecomp.exe"):
+							CrowbarLibPath = Paths.get(fileURI).toString();
 							break;
 					}
 				}
@@ -110,7 +119,7 @@ public class App {
 			return (tempFile.toURI());
 	}
 
-	public static boolean deleteRecursive(File path) throws FileNotFoundException{
+	public static boolean deleteRecursive(File path) throws FileNotFoundException {
 		if (!path.exists()) throw new FileNotFoundException(path.getAbsolutePath());
 		boolean ret = true;
 		if (path.isDirectory()){
@@ -402,6 +411,58 @@ public class App {
 		return vmt;
 	}
 
+	public static QC parseQC(String text) {
+
+		//Why does valve have to be so inconsistant yet so strict?
+		//From https://developer.valvesoftware.com/wiki/$texturegroup
+		//Bug: You must add spaces between the {} and the "". Adding a new skin with {"skin0"} will not work, but { "skin0" } will.
+		//Whyy
+
+		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
+		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
+		text = text.replaceAll("\\$staticprop", ""); // Remove all weirdos
+		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
+		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
+		text = text.replaceAll("\\$", ""); // Remove all key prefixes
+		text = text.replaceAll("\\{ (\".+\") +\"\\}\"", "$1"); // Fix texturegroup formatting
+		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
+		text = text.replaceAll("\" +\"", "\"\""); // Remove all whitespaces and newlines not in quotes
+		//text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
+		
+		Matcher modelNameMatcher = Pattern.compile("\"modelname\"\"([a-zA-Z0-9._/]+)\"").matcher(text);
+		String modelName = "";
+		if (modelNameMatcher.find()) {
+			modelName = modelNameMatcher.group(1);
+		}
+		else {
+			System.out.println("Failed to find modelName");
+		}
+
+		Matcher bodyGroupMatcher = Pattern.compile("(\"bodygroup\"\"[a-zA-Z0-9._/]+\"\\{([a-zA-Z0-9._/\" ]+)\\})").matcher(text);
+		Collection<String> bodygroups = new LinkedList<String>();
+		while (bodyGroupMatcher.find()) {
+			String working = bodyGroupMatcher.group(2);
+			
+			
+			Matcher stringMatcher = Pattern.compile("(\"[a-zA-Z0-9._/ ]+\")").matcher(working);
+			while (stringMatcher.find()) {
+				bodygroups.add(stringMatcher.group(1));
+			}
+			
+			
+			text = text.replace(bodyGroupMatcher.group(1),""); //snip this section
+			bodyGroupMatcher = Pattern.compile("(\"bodygroup\"\"[a-zA-Z0-9._/]+\"\\{([a-zA-Z0-9._/\" ]+)\\})").matcher(text);
+		}
+
+		Matcher cdMaterialsMatcher = Pattern.compile("\"cdmaterials\"\"([a-zA-Z0-9._/]+)\"").matcher(text);
+		Collection<String> cdMaterials = new LinkedList<String>();
+		while (cdMaterialsMatcher.find()) {
+			cdMaterials.add(cdMaterialsMatcher.group(1));
+		}
+
+		return new QC(modelName,bodygroups.toArray(new String[bodygroups.size()]),cdMaterials.toArray(new String[cdMaterials.size()]));
+	}
+
 	
   public static int findClosingBracketMatchIndex(String str, int pos) {
     if (str.charAt(pos) != '{') {
@@ -430,6 +491,7 @@ public class App {
 	}
 	
 	public static VMF parseSolids(VMF vmf) {
+		if (vmf.solids == null) {return vmf;} //There are no brushes in this VMF
 		String planeRegex = "\\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\)";
 		Pattern planePattern = Pattern.compile(planeRegex);
 		Matcher planeMatch;
@@ -662,6 +724,16 @@ public class App {
 		}
 		return -1;
 	}
+	public static ArrayList<Integer> getEntryIndiciesByPattern(ArrayList<Entry> object, String pattern) {
+		ArrayList<Integer> indicies = new ArrayList<Integer>();
+		for (int i = 0; i < object.size(); i++) {
+			if (object !=null && object.get(i).getFullPath().contains(pattern)) {
+				indicies.add(i);
+			}
+			//else{System.out.println(object.get(i).getFullPath());}
+		}
+		return indicies;
+	}
 	public static int getTextureIndexByName(ArrayList<Texture> object, String name) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object !=null && object.get(i).name.equalsIgnoreCase(name)) {
@@ -708,6 +780,7 @@ public class App {
 		//Clean working directory
 		try {
 			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("materials").toString()));
+			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString()));
 		}
 		catch (Exception e) {
 			//System.err.println("Exception: "+e);
@@ -735,10 +808,10 @@ public class App {
 			return;
 		}
 
-		ArrayList<Entry> vpkMaterials = new ArrayList<Entry>();
+		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
 		for (Directory directory : vpk.getDirectories()) {
 			for (Entry entry : directory.getEntries()) {
-				vpkMaterials.add(entry);
+				vpkEntries.add(entry);
 			}
 		}
 
@@ -804,105 +877,107 @@ public class App {
 		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
 		objFile.println("mtllib "+matLibName);
 
-		for (Solid solid : vmf.solids)
-		{
-			verticies.clear();
-			faces.clear();
-			materials.clear();
-
-			for (Side side : solid.sides)
+		
+		if (vmf.solids != null) { //There are no brushes in this VMF
+			for (Solid solid : vmf.solids)
 			{
-				//if (side.material.contains("TOOLS/")){continue;}
-				materials.add(side.material);
-				if (side.dispinfo == null) {
-					if (isDisplacementSolid(solid)) continue;
-					for (Vector3 point : side.points)
-					{
-						verticies.add(point);
-					}
-				}
-				else
+				verticies.clear();
+				faces.clear();
+				materials.clear();
+
+				for (Side side : solid.sides)
 				{
-					//Points are defined in this order:
-					// 1  4
-					// 2  3
-					// -or-
-					// A  D
-					// B  C
-					Vector3 ad = side.points[3].subtract(side.points[0]);
-					Vector3 ab = side.points[1].subtract(side.points[0]);
-					//System.out.println(ad);
-					//System.out.println(ab);
-					for (int i = 0; i < side.dispinfo.normals.length; i++) //rows
-					{
-						for (int j = 0; j < side.dispinfo.normals[0].length; j++) //columns
+					//if (side.material.contains("TOOLS/")){continue;}
+					materials.add(side.material);
+					if (side.dispinfo == null) {
+						if (isDisplacementSolid(solid)) continue;
+						for (Vector3 point : side.points)
 						{
-							Vector3 point = side.points[0]
-								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
-								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
-								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
 							verticies.add(point);
 						}
 					}
-				}
-			}
-			
-			//TODO: Margin of error?
-			Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
-			ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
-
-			Set<String> uniqueMaterials = new HashSet<String>(materials);
-			ArrayList<String> uniqueMaterialsList = new ArrayList<String>(uniqueMaterials);
-			
-			
-			//Write Faces
-			
-			objFile.println("\n");
-			objFile.println("o "+solid.id+"\n");
-			
-			for (Vector3 e : uniqueVerticiesList) {
-				objFile.println("v " + e.x +" "+ e.y +" "+ e.z);
-			}
-
-			
-			for (String el : uniqueMaterialsList) {
-				el = el.toLowerCase();
-				
-				// Read File
-				String VMTText = "";
-				try {
-					int index = getEntryIndexByPath(vpkMaterials, "materials/"+el+".vmt");
-					VMTText = new String(vpkMaterials.get(index).readData());
-				}catch (IOException e) {
-					System.out.println("Exception Occured: " + e.toString());
-				}
-
-				VMT vmt = parseVMT(VMTText);
-				vmt.name = el;
-				//System.out.println(gson.toJson(vmt));
-				//System.out.println(vmt.basetexture);
-				int index = getEntryIndexByPath(vpkMaterials, "materials/"+vmt.basetexture+".vtf");
-				//System.out.println(index);
-				if (index != -1){
-					File materialOutPath = new File(outPath);
-					materialOutPath = new File(formatPath(materialOutPath.getParent()+File.separator+vpkMaterials.get(index).getFullPath()));
-					if (!materialOutPath.exists()) {
-						try {
-							File directory = new File(materialOutPath.getParent());
-							if (!directory.exists()) {
-								directory.mkdirs();
+					else
+					{
+						//Points are defined in this order:
+						// 1  4
+						// 2  3
+						// -or-
+						// A  D
+						// B  C
+						Vector3 ad = side.points[3].subtract(side.points[0]);
+						Vector3 ab = side.points[1].subtract(side.points[0]);
+						//System.out.println(ad);
+						//System.out.println(ab);
+						for (int i = 0; i < side.dispinfo.normals.length; i++) //rows
+						{
+							for (int j = 0; j < side.dispinfo.normals[0].length; j++) //columns
+							{
+								Vector3 point = side.points[0]
+									.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+									.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+									.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+								verticies.add(point);
 							}
-						} catch (Exception e) {
-							System.out.println("Exception Occured: " + e.toString());
 						}
-						try {
-							vpkMaterials.get(index).extract(materialOutPath);
-							String[] command = new String[] {
-								VTFLibPath,
-								"-folder", formatPath(materialOutPath.toString()),
-								"-output", formatPath(materialOutPath.getParent()),
-								"-exportformat", "tga"};
-						
+					}
+				}
+				
+				//TODO: Margin of error?
+				Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
+				ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
+
+				Set<String> uniqueMaterials = new HashSet<String>(materials);
+				ArrayList<String> uniqueMaterialsList = new ArrayList<String>(uniqueMaterials);
+				
+				
+				//Write Faces
+				
+				objFile.println("\n");
+				objFile.println("o "+solid.id+"\n");
+				
+				for (Vector3 e : uniqueVerticiesList) {
+					objFile.println("v " + e.x +" "+ e.y +" "+ e.z);
+				}
+
+				
+				for (String el : uniqueMaterialsList) {
+					el = el.toLowerCase();
+					
+					// Read File
+					String VMTText = "";
+					try {
+						int index = getEntryIndexByPath(vpkEntries, "materials/"+el+".vmt");
+						VMTText = new String(vpkEntries.get(index).readData());
+					}catch (IOException e) {
+						System.out.println("Exception Occured: " + e.toString());
+					}
+
+					VMT vmt = parseVMT(VMTText);
+					vmt.name = el;
+					//System.out.println(gson.toJson(vmt));
+					//System.out.println(vmt.basetexture);
+					int index = getEntryIndexByPath(vpkEntries, "materials/"+vmt.basetexture+".vtf");
+					//System.out.println(index);
+					if (index != -1){
+						File materialOutPath = new File(outPath);
+						materialOutPath = new File(formatPath(materialOutPath.getParent()+File.separator+vpkEntries.get(index).getFullPath()));
+						if (!materialOutPath.exists()) {
+							try {
+								File directory = new File(materialOutPath.getParent());
+								if (!directory.exists()) {
+									directory.mkdirs();
+								}
+							} catch (Exception e) {
+								System.out.println("Exception Occured: " + e.toString());
+							}
+							try {
+								vpkEntries.get(index).extract(materialOutPath);
+								String[] command = new String[] {
+									VTFLibPath,
+									"-folder", formatPath(materialOutPath.toString()),
+									"-output", formatPath(materialOutPath.getParent()),
+									"-exportformat", "tga"};
+							
 								proc = Runtime.getRuntime().exec(command);
 								proc.waitFor();
 								//materialOutPath.delete();
@@ -922,30 +997,10 @@ public class App {
 								}
 								//System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),width,height));
-						}
-						catch (Exception e) {
-							System.err.println("Exception on extract: "+e);
-						}
-						materialFile.println("\n" + 
-						"newmtl "+el+"\n"+
-						"Ka 1.000 1.000 1.000\n"+
-						"Kd 1.000 1.000 1.000\n"+
-						"Ks 0.000 0.000 0.000\n"+
-						"d 1.0\n"+
-						"illum 2\n"+
-						"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-						"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
-						"map_Ks "+"materials/"+vmt.basetexture+".tga");
-						materialFile.println();
-					}
-					else { //File has already been extracted
-						int textureIndex = getTextureIndexByName(textures,el);
-						if (textureIndex == -1) //But this is a new material
-						{
-							textureIndex = getTextureIndexByFileName(textures,vmt.basetexture);
-							//System.out.println("Adding Material: "+ el);
-							textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
-							
+							}
+							catch (Exception e) {
+								System.err.println("Exception on extract: "+e);
+							}
 							materialFile.println("\n" + 
 							"newmtl "+el+"\n"+
 							"Ka 1.000 1.000 1.000\n"+
@@ -958,134 +1013,212 @@ public class App {
 							"map_Ks "+"materials/"+vmt.basetexture+".tga");
 							materialFile.println();
 						}
-					}
-				}
-				else { //Cant find material
-					int textureIndex = getTextureIndexByName(textures,el);
-					if (textureIndex == -1) //But this is a new material
-					{
-						System.out.println("Missing Material: "+ vmt.basetexture);
-						textures.add(new Texture(el,vmt.basetexture,"",1,1));
-					}
-				}
-			}
-			objFile.println();
-			
-			for (Side side : solid.sides)
-			{
-				//if (side.material.contains("TOOLS/")){continue;}
-				Texture texture = textures.get(getTextureIndexByName(textures,side.material));
-
-				side.uAxisTranslation = side.uAxisTranslation % texture.width;
-				side.vAxisTranslation = side.vAxisTranslation % texture.height;
-
-				if (side.uAxisTranslation < -texture.width / 2)
-				{
-					side.uAxisTranslation += texture.width;
-				}
-
-				if (side.vAxisTranslation < -texture.height / 2)
-				{
-					side.vAxisTranslation += texture.height;
-				}
-
-				String buffer = "";
-				
-				if (side.dispinfo == null)
-				{
-					if (isDisplacementSolid(solid)) continue;
-					for (int i = 0; i < side.points.length; i++)
-					{
-						double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-						double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-						u = -u + texture.width;
-						v = -v + texture.height;
-						objFile.println("vt "+u+" "+v);
-						buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
-					}
-					faces.add(new Face(buffer,side.material.toLowerCase()));
-					vertexTextureOffset += side.points.length;
-				}
-				else
-				{
-					//Points are defined in this order:
-					// 1  4
-					// 2  3
-					// -or-
-					// A  D
-					// B  C
-					Vector3 ad = side.points[3].subtract(side.points[0]);
-					Vector3 ab = side.points[1].subtract(side.points[0]);
-					for (int i = 0; i < side.dispinfo.normals.length-1; i++) //all rows but last
-					{
-						for (int j = 0; j < side.dispinfo.normals[0].length-1; j++) //all columns but last
-						{
-							buffer = "";
-							Vector3 point = side.points[0]
-								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
-								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
-								.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
-							double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							u = -u + texture.width;
-							v = -v + texture.height;
-							objFile.println("vt "+u+" "+v);
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset)+" ";
-
-							point = side.points[0]
-								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
-								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
-								.add(side.dispinfo.normals[i+1][j].multiply(side.dispinfo.distances[i+1][j]));
-							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							u = -u + texture.width;
-							v = -v + texture.height;
-							objFile.println("vt "+u+" "+v);
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+1)+" ";
-
-							point = side.points[0]
-								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
-								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
-								.add(side.dispinfo.normals[i+1][j+1].multiply(side.dispinfo.distances[i+1][j+1]));
-							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							u = -u + texture.width;
-							v = -v + texture.height;
-							objFile.println("vt "+u+" "+v);
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+2)+" ";
-
-							point = side.points[0]
-								.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
-								.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
-								.add(side.dispinfo.normals[i][j+1].multiply(side.dispinfo.distances[i][j+1]));
-							u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
-							v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
-							u = -u + texture.width;
-							v = -v + texture.height;
-							objFile.println("vt "+u+" "+v);
-							buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+3)+" ";
-
-							faces.add(new Face(buffer,side.material.toLowerCase()));
+						else { //File has already been extracted
+							int textureIndex = getTextureIndexByName(textures,el);
+							if (textureIndex == -1) //But this is a new material
+							{
+								textureIndex = getTextureIndexByFileName(textures,vmt.basetexture);
+								//System.out.println("Adding Material: "+ el);
+								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
+								
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2\n"+
+								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+								"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
+								"map_Ks "+"materials/"+vmt.basetexture+".tga");
+								materialFile.println();
+							}
 						}
 					}
-				vertexTextureOffset += (side.dispinfo.normals.length-1)*(side.dispinfo.normals[0].length-1)*4;
+					else { //Cant find material
+						int textureIndex = getTextureIndexByName(textures,el);
+						if (textureIndex == -1) //But this is a new material
+						{
+							System.out.println("Missing Material: "+ vmt.basetexture);
+							textures.add(new Texture(el,vmt.basetexture,"",1,1));
+						}
+					}
 				}
-			}
-			objFile.println();
-			vertexOffset += uniqueVerticiesList.size();
-			
-			String lastMaterial = "";
-			for (int i = 0; i < faces.size(); i++) {
-				if (!faces.get(i).material.equals(lastMaterial))
+				objFile.println();
+				
+				for (Side side : solid.sides)
 				{
-					objFile.println("usemtl " + faces.get(i).material);
-				}
-				lastMaterial = faces.get(i).material;
+					//if (side.material.contains("TOOLS/")){continue;}
+					Texture texture = textures.get(getTextureIndexByName(textures,side.material));
 
-				objFile.println("f " + faces.get(i).text);
+					side.uAxisTranslation = side.uAxisTranslation % texture.width;
+					side.vAxisTranslation = side.vAxisTranslation % texture.height;
+
+					if (side.uAxisTranslation < -texture.width / 2)
+					{
+						side.uAxisTranslation += texture.width;
+					}
+
+					if (side.vAxisTranslation < -texture.height / 2)
+					{
+						side.vAxisTranslation += texture.height;
+					}
+
+					String buffer = "";
+					
+					if (side.dispinfo == null)
+					{
+						if (isDisplacementSolid(solid)) continue;
+						for (int i = 0; i < side.points.length; i++)
+						{
+							double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+							double v = Vector3.dot(side.points[i], side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+							u = -u + texture.width;
+							v = -v + texture.height;
+							objFile.println("vt "+u+" "+v);
+							buffer += (uniqueVerticiesList.indexOf(side.points[i]) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+						}
+						faces.add(new Face(buffer,side.material.toLowerCase()));
+						vertexTextureOffset += side.points.length;
+					}
+					else
+					{
+						//Points are defined in this order:
+						// 1  4
+						// 2  3
+						// -or-
+						// A  D
+						// B  C
+						Vector3 ad = side.points[3].subtract(side.points[0]);
+						Vector3 ab = side.points[1].subtract(side.points[0]);
+						for (int i = 0; i < side.dispinfo.normals.length-1; i++) //all rows but last
+						{
+							for (int j = 0; j < side.dispinfo.normals[0].length-1; j++) //all columns but last
+							{
+								buffer = "";
+								Vector3 point = side.points[0]
+									.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+									.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+									.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
+								double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+								double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+								u = -u + texture.width;
+								v = -v + texture.height;
+								objFile.println("vt "+u+" "+v);
+								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset)+" ";
+
+								point = side.points[0]
+									.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j)))
+									.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+									.add(side.dispinfo.normals[i+1][j].multiply(side.dispinfo.distances[i+1][j]));
+								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+								u = -u + texture.width;
+								v = -v + texture.height;
+								objFile.println("vt "+u+" "+v);
+								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+1)+" ";
+
+								point = side.points[0]
+									.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+									.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i+1)))
+									.add(side.dispinfo.normals[i+1][j+1].multiply(side.dispinfo.distances[i+1][j+1]));
+								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+								u = -u + texture.width;
+								v = -v + texture.height;
+								objFile.println("vt "+u+" "+v);
+								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+2)+" ";
+
+								point = side.points[0]
+									.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length-1).abs().multiply(j+1)))
+									.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length-1).abs().multiply(i)))
+									.add(side.dispinfo.normals[i][j+1].multiply(side.dispinfo.distances[i][j+1]));
+								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale) + side.uAxisTranslation / texture.width;
+								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale) + side.vAxisTranslation / texture.height;
+								u = -u + texture.width;
+								v = -v + texture.height;
+								objFile.println("vt "+u+" "+v);
+								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"+((((side.dispinfo.normals.length-1)*i)+j)*4+vertexTextureOffset+3)+" ";
+
+								faces.add(new Face(buffer,side.material.toLowerCase()));
+							}
+						}
+					vertexTextureOffset += (side.dispinfo.normals.length-1)*(side.dispinfo.normals[0].length-1)*4;
+					}
+				}
+				objFile.println();
+				vertexOffset += uniqueVerticiesList.size();
+				
+				String lastMaterial = "";
+				for (int i = 0; i < faces.size(); i++) {
+					if (!faces.get(i).material.equals(lastMaterial))
+					{
+						objFile.println("usemtl " + faces.get(i).material);
+					}
+					lastMaterial = faces.get(i).material;
+
+					objFile.println("f " + faces.get(i).text);
+				}
 			}
 		}
 		
+		System.out.println("[4/?] Decompiling models...");
+
+		for (Entity entity : vmf.entities)
+		{
+			if (entity.classname.contains("prop_")) { //If the entity is a prop
+				System.out.println(entity.model);
+				ArrayList<Integer> indicies = getEntryIndiciesByPattern(vpkEntries,entity.model.substring(0, entity.model.lastIndexOf('.'))+".");
+				//System.out.println(indicies);
+				for (int index : indicies) {
+					//System.out.println(vpkEntries.get(index).getFullPath());
+					
+					if (index != -1){
+						File fileOutPath = new File(outPath);
+						fileOutPath = new File(formatPath(fileOutPath.getParent()+File.separator+vpkEntries.get(index).getFullPath()));
+						if (!fileOutPath.exists()) {
+							try {
+								File directory = new File(fileOutPath.getParent());
+								if (!directory.exists()) {
+									directory.mkdirs();
+								}
+							} catch (Exception e) {
+								System.out.println("Exception Occured: " + e.toString());
+							}
+							try {
+								vpkEntries.get(index).extract(fileOutPath);
+							}
+							catch (Exception e) {
+								System.err.println("Exception on extract: "+e);
+							}
+						}
+					}
+				}
+				
+				String[] command = new String[] {
+					CrowbarLibPath,
+					"-p", formatPath(new File(outPath).getParent()+File.separator+entity.model)};
+			
+				proc = Runtime.getRuntime().exec(command);
+				proc.waitFor();
+				
+				String qcText = "";
+				try {
+					qcText = readFile(new File(outPath).getParent()+File.separator+entity.model.substring(0, entity.model.lastIndexOf('.'))+".qc"); // This line may cause errors if the qc file does not have the same name as the mdl file
+				}catch (IOException e) {
+					System.out.println("Exception Occured: " + e.toString());
+				}
+				if (qcText.matches(""))
+				{
+					System.out.println("WARNING: COULD NOT FIND QC FILE?");
+				}
+				//System.out.println(qcText);
+				
+				QC qc = parseQC(qcText);
+			}
+		}
+
+
 		in.close();
 		objFile.close();
 		materialFile.close();

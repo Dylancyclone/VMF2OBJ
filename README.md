@@ -12,7 +12,8 @@ From the root directory, run:
 
 This project packages the following software and uses them during the conversion process. This project would not be possible without them.
 
-- [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40)
+- [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40) v1.3.3
+- [Crowbar-Command-Line by ZeqMacaw and UltraTechX](https://github.com/UltraTechX/Crowbar-Command-Line) 0.58-v2
 
 ## TODO
 
@@ -55,9 +56,11 @@ This project packages the following software and uses them during the conversion
         - [ ] Blends
 - [X] Brush entities
 - [ ] Point Entities
-- [ ] Models
-    - [ ] Geometry
-    - [ ] Textures
+    - [ ] prop_*
+        - [ ] Geometry
+        - [ ] Textures
+            - [ ] Skins
+    - [ ] info_overlay
 
 ### Feature Wishlist
 Wow todo list after todo list after wishlist. This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.

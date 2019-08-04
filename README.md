@@ -24,19 +24,18 @@ This project packages the following software and uses them during the conversion
 - [X] Collapse Brush Vertices
 - [X] Write Brushes
     - [X] ~~Per object or collapsed?~~ Per object, but may add option later
-- [ ] Extract Models
-    - [ ] VPK integration
+- [X] Extract Models
+    - [X] VPK integration
 - [X] Extract materials
     - [X] Basic VTFs
     - [X] VMTs (blends etc)
 - [X] Convert Materials
     - [X] VTFLib?
-- [ ] Convert models to SMD
-    - [ ] Crowbar?
-- [ ] Convert models to OBJ
-    - [ ] BST?
-- [ ] Write Models
-- [ ] Write Materials
+- [X] Convert models to SMD
+    - [X] Crowbar?
+- [X] Convert models to OBJ
+- [X] Write Models
+- [X] Write Materials
 
 ### Support
 - [ ] Brushes
@@ -57,9 +56,12 @@ This project packages the following software and uses them during the conversion
 - [X] Brush entities
 - [ ] Point Entities
     - [ ] prop_*
-        - [ ] Geometry
-        - [ ] Textures
+        - [X] Geometry
+        - [ ] Geometry Normals
+        - [X] Textures
             - [ ] Skins
+        - [ ] Special cases
+            - [ ] prop_exploding_barrel
     - [ ] info_overlay
 
 ### Feature Wishlist

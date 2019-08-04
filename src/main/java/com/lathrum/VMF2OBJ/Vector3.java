@@ -140,6 +140,65 @@ public class Vector3 {
 		return (this.x * vector.x) + (this.y * vector.y) + (this.z * vector.z);
 	}
 
+	
+	public static Vector3 rotateX(Vector3 vector, double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			vector.x,
+			vector.y*cos-vector.z*sin,
+			vector.z*cos+vector.y*sin);
+	}
+	public Vector3 rotateX(double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			this.x,
+			this.y*cos-this.z*sin,
+			this.z*cos+this.y*sin);
+	}
+	
+	public static Vector3 rotateY(Vector3 vector, double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			vector.x*cos-vector.z*sin,
+			vector.y,
+			vector.z*cos+vector.x*sin);
+	}
+	public Vector3 rotateY(double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			this.x*cos-this.z*sin,
+			this.y,
+			this.z*cos+this.x*sin);
+	}
+	
+	public static Vector3 rotateZ(Vector3 vector, double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			vector.x*cos-vector.y*sin,
+			vector.y*cos+vector.x*sin,
+			vector.z);
+	}
+	public Vector3 rotateZ(double rad) {
+		double cos = Math.cos(rad);
+		double sin = Math.sin(rad);
+		return new Vector3(
+			this.x*cos-this.y*sin,
+			this.y*cos+this.x*sin,
+			this.z);
+	}
+	
+	public static Vector3 rotate3D(Vector3 vector, double radX, double radY, double radZ) {
+		return vector.rotateX(radX).rotateY(radY).rotateZ(radZ);
+	}
+	public Vector3 rotate3D(double radX, double radY, double radZ) {
+		return this.rotateX(radX).rotateY(radY).rotateZ(radZ);
+	}
+
 	public static Vector3 normalize(Vector3 vector) {
 		double length = vector.magnitude();
 		return vector.divide(new Vector3(length,length,length));

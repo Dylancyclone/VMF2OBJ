@@ -1,5 +1,6 @@
 import java.util.*;
 import java.util.zip.*;
+import javax.imageio.ImageIO;
 import java.util.regex.*;
 import com.google.gson.*;
 import com.lathrum.VMF2OBJ.*;
@@ -906,6 +907,7 @@ public class App {
 		ArrayList<Texture> textures = new ArrayList<Texture>();
 		int vertexOffset = 1;
 		int vertexTextureOffset = 1;
+		int vertexNormalOffset = 1;
 		System.out.println("[3/?] Writing brushes...");
 		
 		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
@@ -1013,18 +1015,31 @@ public class App {
 									VTFLibPath,
 									"-folder", formatPath(materialOutPath.toString()),
 									"-output", formatPath(materialOutPath.getParent()),
-									"-exportformat", "tga"};
+									"-exportformat", "jpg"};
+								
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									command[6]="tga"; //If the texture is translucent, use the targa format
+								}
 							
 								proc = Runtime.getRuntime().exec(command);
 								proc.waitFor();
 								//materialOutPath.delete();
-								materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
-								
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
+								} else {
+									materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".jpg");
+								}
+
 								int width = 1;
 								int height = 1;
+								BufferedImage bimg;
 								try {
-									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-									BufferedImage bimg = TargaReader.decode(fileContent);
+									if (vmt.translucent==1||vmt.alphatest==1) {
+										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+										bimg = TargaReader.decode(fileContent);
+									} else {
+										bimg = ImageIO.read(materialOutPath);
+									}
 									width = bimg.getWidth();
 									height = bimg.getHeight();
 								}
@@ -1038,16 +1053,28 @@ public class App {
 							catch (Exception e) {
 								System.err.println("Exception on extract: "+e);
 							}
-							materialFile.println("\n" + 
-							"newmtl "+el+"\n"+
-							"Ka 1.000 1.000 1.000\n"+
-							"Kd 1.000 1.000 1.000\n"+
-							"Ks 0.000 0.000 0.000\n"+
-							"d 1.0\n"+
-							"illum 2\n"+
-							"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-							"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
-							"map_Ks "+"materials/"+vmt.basetexture+".tga");
+							
+							if (vmt.translucent==1||vmt.alphatest==1) {
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2\n"+
+								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+								"map_Kd "+"materials/"+vmt.basetexture+".tga");
+							} else {
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2\n"+
+								"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
+								"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+							}
 							materialFile.println();
 						}
 						else { //File has already been extracted
@@ -1058,16 +1085,27 @@ public class App {
 								//System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
 								
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
-								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-								"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
-								"map_Ks "+"materials/"+vmt.basetexture+".tga");
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									materialFile.println("\n" + 
+									"newmtl "+el+"\n"+
+									"Ka 1.000 1.000 1.000\n"+
+									"Kd 1.000 1.000 1.000\n"+
+									"Ks 0.000 0.000 0.000\n"+
+									"d 1.0\n"+
+									"illum 2\n"+
+									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+									"map_Kd "+"materials/"+vmt.basetexture+".tga");
+								} else {
+									materialFile.println("\n" + 
+									"newmtl "+el+"\n"+
+									"Ka 1.000 1.000 1.000\n"+
+									"Kd 1.000 1.000 1.000\n"+
+									"Ks 0.000 0.000 0.000\n"+
+									"d 1.0\n"+
+									"illum 2\n"+
+									"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
+									"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+								}
 								materialFile.println();
 							}
 						}
@@ -1358,18 +1396,31 @@ public class App {
 									VTFLibPath,
 									"-folder", formatPath(materialOutPath.toString()),
 									"-output", formatPath(materialOutPath.getParent()),
-									"-exportformat", "tga"};
+									"-exportformat", "jpg"};
+
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									convertCommand[6]="tga"; //If the texture is translucent, use the targa format
+								}
 							
 								proc = Runtime.getRuntime().exec(convertCommand);
 								proc.waitFor();
 								//materialOutPath.delete();
-								materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".tga");
+								} else {
+									materialOutPath = new File(materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.'))+".jpg");
+								}
 								
 								int width = 1;
 								int height = 1;
+								BufferedImage bimg;
 								try {
-									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-									BufferedImage bimg = TargaReader.decode(fileContent);
+									if (vmt.translucent==1||vmt.alphatest==1) {
+										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+										bimg = TargaReader.decode(fileContent);
+									} else {
+										bimg = ImageIO.read(materialOutPath);
+									}
 									width = bimg.getWidth();
 									height = bimg.getHeight();
 								}
@@ -1383,16 +1434,27 @@ public class App {
 							catch (Exception e) {
 								System.err.println("Exception on extract: "+e);
 							}
-							materialFile.println("\n" + 
-							"newmtl "+el+"\n"+
-							"Ka 1.000 1.000 1.000\n"+
-							"Kd 1.000 1.000 1.000\n"+
-							"Ks 0.000 0.000 0.000\n"+
-							"d 1.0\n"+
-							"illum 2\n"+
-							"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-							"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
-							"map_Ks "+"materials/"+vmt.basetexture+".tga");
+							if (vmt.translucent==1||vmt.alphatest==1) {
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2\n"+
+								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+								"map_Kd "+"materials/"+vmt.basetexture+".tga");
+							} else {
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2\n"+
+								"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
+								"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+							}
 							materialFile.println();
 						}
 						else { //File has already been extracted
@@ -1403,16 +1465,27 @@ public class App {
 								//System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
 								
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
-								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-								"map_Kd "+"materials/"+vmt.basetexture+".tga"+"\n"+
-								"map_Ks "+"materials/"+vmt.basetexture+".tga");
+								if (vmt.translucent==1||vmt.alphatest==1) {
+									materialFile.println("\n" + 
+									"newmtl "+el+"\n"+
+									"Ka 1.000 1.000 1.000\n"+
+									"Kd 1.000 1.000 1.000\n"+
+									"Ks 0.000 0.000 0.000\n"+
+									"d 1.0\n"+
+									"illum 2\n"+
+									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
+									"map_Kd "+"materials/"+vmt.basetexture+".tga");
+								} else {
+									materialFile.println("\n" + 
+									"newmtl "+el+"\n"+
+									"Ka 1.000 1.000 1.000\n"+
+									"Kd 1.000 1.000 1.000\n"+
+									"Ks 0.000 0.000 0.000\n"+
+									"d 1.0\n"+
+									"illum 2\n"+
+									"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
+									"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+								}
 								materialFile.println();
 							}
 						}
@@ -1440,10 +1513,13 @@ public class App {
 						double u = Double.parseDouble(SMDTriangle.points[i].uaxis);
 						double v = Double.parseDouble(SMDTriangle.points[i].vaxis);
 						objFile.println("vt "+u+" "+v);
-						buffer += (uniqueVerticiesList.indexOf(SMDTriangle.points[i].position) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+						objFile.println("vn " + SMDTriangle.points[i].normal.x +" "+ SMDTriangle.points[i].normal.y +" "+ SMDTriangle.points[i].normal.z);
+						//buffer += (uniqueVerticiesList.indexOf(SMDTriangle.points[i].position) + vertexOffset) + "/"+(i+vertexTextureOffset)+" ";
+						buffer += (uniqueVerticiesList.indexOf(SMDTriangle.points[i].position) + vertexOffset) + "/"+(i+vertexTextureOffset)+"/"+(i+vertexNormalOffset)+" ";
 					}
 					faces.add(new Face(buffer,SMDTriangle.materialName.toLowerCase()));
 					vertexTextureOffset += SMDTriangle.points.length;
+					vertexNormalOffset += SMDTriangle.points.length;
 				}
 				objFile.println();
 				vertexOffset += uniqueVerticiesList.size();

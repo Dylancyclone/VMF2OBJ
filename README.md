@@ -57,7 +57,7 @@ This project packages the following software and uses them during the conversion
     - [ ] Point Entities
         - [ ] prop_*
             - [X] Geometry
-            - [ ] Geometry Normals
+            - [X] Geometry Normals
             - [X] Materials
             - [ ] Special cases
                 - [ ] prop_exploding_barrel
@@ -68,12 +68,14 @@ This project packages the following software and uses them during the conversion
 - Rebuild argument system
 - Add support for external resources
 - See if it's feesable to implement advanced VMT features now, or wait for later
+- Add progress bars for each step
 
 ### Feature Wishlist
 This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
 
 - [ ] Optimizations
     - [ ] Collapse Vertex Textures
+    - [ ] Collapse Vertex Normals
     - [ ] Collapse *almost* duplicate verticies
     - [ ] Sort faces by texture
 - [ ] Advanced VMT Support

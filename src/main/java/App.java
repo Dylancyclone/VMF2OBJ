@@ -911,7 +911,7 @@ public class App {
 		System.out.println("[3/?] Writing brushes...");
 		
 		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
-		objFile.println("mtllib "+matLibName);
+		objFile.println("mtllib "+matLibName.substring(formatPath(matLibName).lastIndexOf(File.separatorChar)+1, matLibName.length()));
 
 		
 		if (vmf.solids != null) { //There are no brushes in this VMF
@@ -1054,26 +1054,61 @@ public class App {
 								System.err.println("Exception on extract: "+e);
 							}
 							
+							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+								if (vmt.bumpmap.endsWith(".vtf")) {
+									vmt.bumpmap = vmt.bumpmap.substring(0, vmt.bumpmap.lastIndexOf('.')); //snip the extension
+								}
+								//System.out.println("Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
+								int bumpMapIndex = getEntryIndexByPath(vpkEntries, "materials/"+vmt.bumpmap+".vtf");
+								//System.out.println(bumpMapIndex);
+								if (bumpMapIndex != -1){
+									File bumpMapOutPath = new File(outPath);
+									bumpMapOutPath = new File(formatPath(bumpMapOutPath.getParent()+File.separator+vpkEntries.get(bumpMapIndex).getFullPath()));
+									if (!bumpMapOutPath.exists()) {
+										try {
+											File directory = new File(bumpMapOutPath.getParent());
+											if (!directory.exists()) {
+												directory.mkdirs();
+											}
+										} catch (Exception e) {
+											System.out.println("Exception Occured: " + e.toString());
+										}
+										try {
+											vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
+											String[] command = new String[] {
+												VTFLibPath,
+												"-folder", formatPath(bumpMapOutPath.toString()),
+												"-output", formatPath(bumpMapOutPath.getParent()),
+												"-exportformat", "jpg"};
+											proc = Runtime.getRuntime().exec(command);
+											proc.waitFor();
+										}
+										catch (Exception e) {
+											System.err.println("Exception on extract: "+e);
+										}
+									}
+								}
+							}
+							
+							materialFile.println("\n" + 
+							"newmtl "+el+"\n"+
+							"Ka 1.000 1.000 1.000\n"+
+							"Kd 1.000 1.000 1.000\n"+
+							"Ks 0.000 0.000 0.000\n"+
+							"d 1.0\n"+
+							"illum 2");
 							if (vmt.translucent==1||vmt.alphatest==1) {
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
+								materialFile.println(
 								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
 								"map_Kd "+"materials/"+vmt.basetexture+".tga");
 							} else {
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
+								materialFile.println(
 								"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
 								"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+							}
+							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+								materialFile.println(
+								"map_bump "+"materials/"+vmt.bumpmap+".jpg");
 							}
 							materialFile.println();
 						}
@@ -1085,26 +1120,25 @@ public class App {
 								//System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
 								
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2");
 								if (vmt.translucent==1||vmt.alphatest==1) {
-									materialFile.println("\n" + 
-									"newmtl "+el+"\n"+
-									"Ka 1.000 1.000 1.000\n"+
-									"Kd 1.000 1.000 1.000\n"+
-									"Ks 0.000 0.000 0.000\n"+
-									"d 1.0\n"+
-									"illum 2\n"+
+									materialFile.println(
 									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
 									"map_Kd "+"materials/"+vmt.basetexture+".tga");
 								} else {
-									materialFile.println("\n" + 
-									"newmtl "+el+"\n"+
-									"Ka 1.000 1.000 1.000\n"+
-									"Kd 1.000 1.000 1.000\n"+
-									"Ks 0.000 0.000 0.000\n"+
-									"d 1.0\n"+
-									"illum 2\n"+
+									materialFile.println(
 									"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
 									"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+								}
+								if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+									materialFile.println(
+									"map_bump "+"materials/"+vmt.bumpmap+".jpg");
 								}
 								materialFile.println();
 							}
@@ -1242,7 +1276,10 @@ public class App {
 		for (Entity entity : vmf.entities)
 		{
 			if (entity.classname.contains("prop_")) { //If the entity is a prop
-				if (entity.model == null) {continue;} //TODO: props with built in models, like prop_exploding barrel
+				if (entity.model == null) {
+					System.out.println("Prop has no model? "+entity.classname);
+					continue;
+				}
 				verticies.clear();
 				faces.clear();
 				materials.clear();
@@ -1434,26 +1471,62 @@ public class App {
 							catch (Exception e) {
 								System.err.println("Exception on extract: "+e);
 							}
+							
+							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+								if (vmt.bumpmap.endsWith(".vtf")) {
+									vmt.bumpmap = vmt.bumpmap.substring(0, vmt.bumpmap.lastIndexOf('.')); //snip the extension
+								}
+								//System.out.println("Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
+								int bumpMapIndex = getEntryIndexByPath(vpkEntries, "materials/"+vmt.bumpmap+".vtf");
+								//System.out.println(bumpMapIndex);
+								if (bumpMapIndex != -1){
+									File bumpMapOutPath = new File(outPath);
+									bumpMapOutPath = new File(formatPath(bumpMapOutPath.getParent()+File.separator+vpkEntries.get(bumpMapIndex).getFullPath()));
+									if (!bumpMapOutPath.exists()) {
+										try {
+											File directory = new File(bumpMapOutPath.getParent());
+											if (!directory.exists()) {
+												directory.mkdirs();
+											}
+										} catch (Exception e) {
+											System.out.println("Exception Occured: " + e.toString());
+										}
+										try {
+											vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
+											String[] convertCommand = new String[] {
+												VTFLibPath,
+												"-folder", formatPath(bumpMapOutPath.toString()),
+												"-output", formatPath(bumpMapOutPath.getParent()),
+												"-exportformat", "jpg"};
+											proc = Runtime.getRuntime().exec(convertCommand);
+											proc.waitFor();
+										}
+										catch (Exception e) {
+											System.err.println("Exception on extract: "+e);
+										}
+									}
+								}
+							}
+							
+							materialFile.println("\n" + 
+							"newmtl "+el+"\n"+
+							"Ka 1.000 1.000 1.000\n"+
+							"Kd 1.000 1.000 1.000\n"+
+							"Ks 0.000 0.000 0.000\n"+
+							"d 1.0\n"+
+							"illum 2");
 							if (vmt.translucent==1||vmt.alphatest==1) {
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
+								materialFile.println(
 								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
 								"map_Kd "+"materials/"+vmt.basetexture+".tga");
 							} else {
-								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
-								"illum 2\n"+
+								materialFile.println(
 								"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
 								"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+							}
+							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+								materialFile.println(
+								"map_bump "+"materials/"+vmt.bumpmap+".jpg");
 							}
 							materialFile.println();
 						}
@@ -1465,26 +1538,25 @@ public class App {
 								//System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el,vmt.basetexture,materialOutPath.toString(),textures.get(textureIndex).width,textures.get(textureIndex).height));
 								
+								materialFile.println("\n" + 
+								"newmtl "+el+"\n"+
+								"Ka 1.000 1.000 1.000\n"+
+								"Kd 1.000 1.000 1.000\n"+
+								"Ks 0.000 0.000 0.000\n"+
+								"d 1.0\n"+
+								"illum 2");
 								if (vmt.translucent==1||vmt.alphatest==1) {
-									materialFile.println("\n" + 
-									"newmtl "+el+"\n"+
-									"Ka 1.000 1.000 1.000\n"+
-									"Kd 1.000 1.000 1.000\n"+
-									"Ks 0.000 0.000 0.000\n"+
-									"d 1.0\n"+
-									"illum 2\n"+
+									materialFile.println(
 									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
 									"map_Kd "+"materials/"+vmt.basetexture+".tga");
 								} else {
-									materialFile.println("\n" + 
-									"newmtl "+el+"\n"+
-									"Ka 1.000 1.000 1.000\n"+
-									"Kd 1.000 1.000 1.000\n"+
-									"Ks 0.000 0.000 0.000\n"+
-									"d 1.0\n"+
-									"illum 2\n"+
+									materialFile.println(
 									"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
 									"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+								}
+								if (vmt.bumpmap != null) { //If the material has a bump map associated with it
+									materialFile.println(
+									"map_bump "+"materials/"+vmt.bumpmap+".jpg");
 								}
 								materialFile.println();
 							}

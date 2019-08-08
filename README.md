@@ -41,33 +41,30 @@ This project packages the following software and uses them during the conversion
 - [ ] Input Resources
     - [X] From VPK
     - [ ] From external source (i.e decompiled map)
-- [ ] Brushes
+- [X] Brushes
     - [X] Regular Geometry
     - [X] Irregular Geometry
-    - [ ] Materials
+    - [X] Materials
         - [X] Basic VTFs
-        - [ ] VMTs
+        - [X] VMTs
             - [X] Basic
-            - [ ] Advanced (see below)
+            - [X] Advanced
     - [X] Displacements
         - [X] Geometry
         - [X] Materials
 - [ ] Entities
     - [X] Brush entities
     - [ ] Point Entities
-        - [ ] prop_*
+        - [X] prop_*
             - [X] Geometry
             - [X] Geometry Normals
             - [X] Materials
-            - [ ] Special cases
-                - [ ] prop_exploding_barrel
         - [ ] info_overlay
 
 ### To do list
 
 - Rebuild argument system
 - Add support for external resources
-- See if it's feesable to implement advanced VMT features now, or wait for later
 - Add progress bars for each step
 
 ### Feature Wishlist
@@ -78,12 +75,6 @@ This list contains little improvements that while dont HAVE to be done, they wou
     - [ ] Collapse Vertex Normals
     - [ ] Collapse *almost* duplicate verticies
     - [ ] Sort faces by texture
-- [ ] Advanced VMT Support
-    - [ ] $bumpmap
-    - [ ] $detail
-        - [ ] $detailscale
-        - [ ] $detailblendfactor
-- [ ] Displacement Blends
 
 ### Unsupported Features
 These are features that I don't have any plans to implement, either because I don't know how to, or the feature is too inconsistant, or would require extreme reworks to the current implementation.

@@ -5,6 +5,9 @@ public class VMT {
 	
 	public String basetexture;
 
+	public int translucent;
+	public int alphatest;
+
 	public String bumpmap;
 
 	public String detail;

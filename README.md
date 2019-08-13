@@ -12,7 +12,8 @@ From the root directory, run:
 
 This project packages the following software and uses them during the conversion process. This project would not be possible without them.
 
-- [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40)
+- [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40) v1.3.3
+- [Crowbar-Command-Line by ZeqMacaw and UltraTechX](https://github.com/UltraTechX/Crowbar-Command-Line) 0.58-v2
 
 ## TODO
 
@@ -22,51 +23,63 @@ This project packages the following software and uses them during the conversion
     - [X] Complete data (three points make a *bounded* plane)
 - [X] Collapse Brush Vertices
 - [X] Write Brushes
-    - [X] ~~Per object or collapsed?~~ Per object, but may add option later
-- [ ] Extract Models
-    - [ ] VPK integration
+- [X] Extract Models
+    - [X] VPK integration
 - [X] Extract materials
     - [X] Basic VTFs
-    - [X] VMTs (blends etc)
+    - [X] VMTs
 - [X] Convert Materials
     - [X] VTFLib?
-- [ ] Convert models to SMD
-    - [ ] Crowbar?
-- [ ] Convert models to OBJ
-    - [ ] BST?
-- [ ] Write Models
-- [ ] Write Materials
+- [X] Convert models to SMD
+    - [X] Crowbar?
+- [X] Convert models to OBJ
+- [X] Write Models
+- [X] Write Materials
+- [X] Clean up
 
 ### Support
-- [ ] Brushes
-    - [X] Regular
-    - [X] Irregular
-    - [ ] Textures
-        - [X] From VPK
-        - [ ] From external source (i.e decompiled map)
+- [ ] Input Resources
+    - [X] From VPK
+    - [ ] From external source (i.e decompiled map)
+- [X] Brushes
+    - [X] Regular Geometry
+    - [X] Irregular Geometry
+    - [X] Materials
         - [X] Basic VTFs
-        - [ ] VMTs
+        - [X] VMTs
             - [X] Basic
-            - [ ] Advanced (see below)
-- [ ] Displacements
-    - [X] Geometry
-    - [ ] Textures
-        - [X] Regular VMT
-        - [ ] Blends
-- [X] Brush entities
-- [ ] Point Entities
-- [ ] Models
-    - [ ] Geometry
-    - [ ] Textures
+            - [X] Advanced
+    - [X] Displacements
+        - [X] Geometry
+        - [X] Materials
+- [ ] Entities
+    - [X] Brush entities
+    - [ ] Point Entities
+        - [X] prop_*
+            - [X] Geometry
+            - [X] Geometry Normals
+            - [X] Materials
+        - [ ] info_overlay
+
+### To do list
+
+- Rebuild argument system
+- Add support for external resources
+- Add progress bars for each step
 
 ### Feature Wishlist
-Wow todo list after todo list after wishlist. This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
+This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
 
-- [ ] Collapse Vertex Textures
-- [ ] Collapse *almost* duplicate verticies
-- [ ] Sort faces by texture
-- [ ] Advanced VMT Support
-    - [ ] $bumpmap
-    - [ ] $detail
-        - [ ] $detailscale
-        - [ ] $detailblendfactor
+- [ ] Optimizations
+    - [ ] Collapse Vertex Textures
+    - [ ] Collapse Vertex Normals
+    - [ ] Collapse *almost* duplicate verticies
+    - [ ] Sort faces by texture
+
+### Unsupported Features
+These are features that I don't have any plans to implement, either because I don't know how to, or the feature is too inconsistant, or would require extreme reworks to the current implementation.
+
+- [ ] prop_* skins
+    - Textures are defined per triangle in a model's decompiled SMD, but skins are defined in it's QC file. I don't know of a good way to line up skins with multiple textures to a single model. I would theoretically be possible to implement single-material skins, but the results may end up being inconsistant and produce unexpected results.
+- [ ] Displacement blend materials
+    - All the data needed for a blend material is included in the displacement object, but in order to implement it into an obj object either a separate texture must be generated with the blend built in, or a per-vertex material must be applied and blended between. The downsides of the first option is that it requires a lot of processing before hand (and Java's compatibility with Targa files is kinda potato at best), and the resulting texture is not editable. The downside of the second option is that the each vertex has to be either entirely one texture or entirely the other, and the linear blend will always go between the two. This will make for very strange looking textures when comparing it to the hammer counterpart, and it would require a complete rework of how the application handles textures. The perfect-world solution is to use a format that supports this kind of thing out of the box, but then you loose compatibility pretty quickly.

@@ -35,7 +35,7 @@ This project packages the following software and uses them during the conversion
 - [X] Convert models to OBJ
 - [X] Write Models
 - [X] Write Materials
-- [ ] Clean up
+- [X] Clean up
 
 ### Support
 - [ ] Input Resources

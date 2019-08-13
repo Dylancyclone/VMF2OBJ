@@ -119,6 +119,11 @@ public class App {
 
 			return (tempFile.toURI());
 	}
+	public static String getFileExtension(File file) {
+    String fileName = file.getName();
+    int dotIndex = fileName.lastIndexOf('.');
+    return (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1);
+	}
 
 	public static boolean deleteRecursive(File path) throws FileNotFoundException {
 		if (!path.exists()) throw new FileNotFoundException(path.getAbsolutePath());
@@ -129,7 +134,21 @@ public class App {
 				}
 		}
 		return ret && path.delete();
-}
+	}
+
+	public static boolean deleteRecursiveByExtension(File path, String ext) throws FileNotFoundException {
+		if (!path.exists()) throw new FileNotFoundException(path.getAbsolutePath());
+		boolean ret = true;
+		if (path.isDirectory()){
+				for (File f : path.listFiles()){
+						ret = ret && deleteRecursiveByExtension(f,ext);
+				}
+		}
+		else {
+			ret = ret && (getFileExtension(path).matches(ext)) ? path.delete() : true;
+		}
+		return ret;
+	}
 
 	static String readFile(String path) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
@@ -810,7 +829,7 @@ public class App {
 		String outPath = args[1];
 		String objName = outPath + ".obj";
 		String matLibName = outPath + ".mtl";
-		
+
 
 		//Clean working directory
 		try {
@@ -1609,10 +1628,16 @@ public class App {
 			}
 		}
 
+		
+		System.out.println("[5/?] Cleaning up...");
+
+		deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString())); //Delete models. Everything is now in the OBJ file
+		deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()),"vtf"); //Delete unconverted textures
 
 		in.close();
 		objFile.close();
 		materialFile.close();
 
+		System.out.println("Conversion complete!");
 	}
 }

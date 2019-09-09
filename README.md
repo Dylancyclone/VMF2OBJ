@@ -52,14 +52,13 @@ This project packages the following software and uses them during the conversion
     - [X] Displacements
         - [X] Geometry
         - [X] Materials
-- [ ] Entities
+- [X] Entities
     - [X] Brush entities
-    - [ ] Point Entities
+    - [X] Point Entities
         - [X] prop_*
             - [X] Geometry
             - [X] Geometry Normals
             - [X] Materials
-        - [ ] info_overlay
 
 ### To do list
 
@@ -77,9 +76,13 @@ This list contains little improvements that while dont HAVE to be done, they wou
     - [ ] Sort faces by texture
 
 ### Unsupported Features
-These are features that I don't have any plans to implement, either because I don't know how to, or the feature is too inconsistant, or would require extreme reworks to the current implementation.
+These are features that I don't have any plans to implement, either because I don't know how to, or the feature is too inconsistant, or would require extreme reworks to the current implementation. Of course, if you have an idea on how to implement any of these please feel free to submit a PR or issue discussing the idea.
 
 - [ ] prop_* skins
     - Textures are defined per triangle in a model's decompiled SMD, but skins are defined in it's QC file. I don't know of a good way to line up skins with multiple textures to a single model. I would theoretically be possible to implement single-material skins, but the results may end up being inconsistant and produce unexpected results.
 - [ ] Displacement blend materials
     - All the data needed for a blend material is included in the displacement object, but in order to implement it into an obj object either a separate texture must be generated with the blend built in, or a per-vertex material must be applied and blended between. The downsides of the first option is that it requires a lot of processing before hand (and Java's compatibility with Targa files is kinda potato at best), and the resulting texture is not editable. The downside of the second option is that the each vertex has to be either entirely one texture or entirely the other, and the linear blend will always go between the two. This will make for very strange looking textures when comparing it to the hammer counterpart, and it would require a complete rework of how the application handles textures. The perfect-world solution is to use a format that supports this kind of thing out of the box, but then you loose compatibility pretty quickly.
+- [ ] infodecal
+    - infodecal entities don't store any data about where the decal is displayed, meaning it is projected from it's origin to the brush and clipped/sized accordingly. I personally don't know enough about how this process is done, and I don't feel comfortable trying to brute force it. I looked around for the source code associated with it, but I could not find anything to reverse engineer. I know it's a pretty important feature, but I don't know how to make it work *correctly*.
+- [ ] info_overlay
+    - info_overlay is basically nextgen infodecal. Instead of just projecting to one side, an info_overlay can be projected to multiple faces, including different orientations and brushes so that the decal can "wrap" around. Again, I honestly don't really know how to approach this without brute forcing every face to create a seperate object with it's own UV wrapping. And that doesn't even include the fact that info_overlays can be distorted before being placed.

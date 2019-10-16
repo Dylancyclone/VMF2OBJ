@@ -64,8 +64,7 @@ This project packages the following software and uses them during the conversion
 
 ### To do list
 
-- Rebuild argument system?
-- Add progress bars for each step
+- Rebuild argument system
 
 ### Feature Wishlist
 

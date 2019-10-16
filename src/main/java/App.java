@@ -10,6 +10,11 @@ import java.nio.file.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.awt.image.BufferedImage;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarBuilder;
+import me.tongfei.progressbar.ProgressBarStyle;
 
 public class App {
 
@@ -662,7 +667,6 @@ public class App {
 			}
 		}
 
-		// TODO: Convex check?
 		// Theoretically source only allows convex shapes, and fixes any problems upon saving...
 
 		if (intersections.size() < 3)
@@ -839,6 +843,23 @@ public class App {
 		}
 		return entries;
 	}
+	
+	public static void printProgressBar(String text) {
+		Terminal terminal;
+		int consoleWidth = 80;
+		try {
+			// Issue #42
+			// Defaulting to a dumb terminal when a supported terminal can not be correctly created
+			// see https://github.com/jline/jline3/issues/291
+			terminal = TerminalBuilder.builder().dumb(true).build();
+			if (terminal.getWidth() >= 10)  // Workaround for issue #23 under IntelliJ
+				consoleWidth = terminal.getWidth();
+		}
+		catch (IOException ignored) { }
+		String pad = new String(new char[consoleWidth-text.length()]).replace("\0", " ");
+
+		System.out.println("\r"+text+pad);
+	}
 
 
 	public static void main(String args[]) throws Exception{
@@ -864,6 +885,7 @@ public class App {
 		String outPath = args[1];
 		String objName = outPath + ".obj";
 		String matLibName = outPath + ".mtl";
+		ProgressBarBuilder pbb;
 
 
 		//Clean working directory
@@ -884,8 +906,12 @@ public class App {
 		}
 		
 
+		//
+		// Read VPK
+		//
+
 		// Open vpk file
-		System.out.println("[1/?] Reading VPK...");
+		System.out.println("[1/5] Reading VPK...");
 		File vpkFile = new File(args[2]);
 		VPK vpk = new VPK(vpkFile);
 		try {
@@ -904,7 +930,7 @@ public class App {
 			}
 		}
 
-		if (!args[3].matches("") && args[3]!=null) { //If there are external resources
+		if (args.length > 3 && args[3]!=null && !args[3].matches("")) { //If there are external resources
 			vpkEntries.addAll(addExtraFiles(formatPath(args[3]),new File(args[3])));
 		}
 
@@ -952,11 +978,15 @@ public class App {
 		// Read Geometry
 		//
 
-		System.out.println("[2/?] Reading geometry...");
+		System.out.println("[2/5] Reading geometry...");
 
 		VMF vmf = parseVMF(text);
 		vmf = parseSolids(vmf);
 		//System.out.println(gson.toJson(vmf));
+
+		//
+		// Write brushes
+		//
 
 		ArrayList<Vector3> verticies = new ArrayList<Vector3>();
 		ArrayList<Face> faces = new ArrayList<Face>();
@@ -966,14 +996,18 @@ public class App {
 		int vertexOffset = 1;
 		int vertexTextureOffset = 1;
 		int vertexNormalOffset = 1;
-		System.out.println("[3/?] Writing brushes...");
+		System.out.println("[3/5] Writing brushes...");
 		
 		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
 		objFile.println("mtllib "+matLibName.substring(formatPath(matLibName).lastIndexOf(File.separatorChar)+1, matLibName.length()));
 
 		
 		if (vmf.solids != null) { //There are no brushes in this VMF
-			for (Solid solid : vmf.solids)
+			pbb = new ProgressBarBuilder()
+				.setStyle(ProgressBarStyle.ASCII)
+				.setTaskName("Writing Brushes...")
+				.showSpeed();
+			for (Solid solid : ProgressBar.wrap(Arrays.asList(vmf.solids),pbb))
 			{
 				verticies.clear();
 				faces.clear();
@@ -1042,7 +1076,7 @@ public class App {
 					try {
 						int index = getEntryIndexByPath(vpkEntries, "materials/"+el+".vmt");
 						if (index ==-1) {
-							System.out.println("Missing Material: "+el);
+							printProgressBar("Missing Material: "+el);
 							continue;
 						}
 						VMTText = new String(vpkEntries.get(index).readData());
@@ -1210,7 +1244,7 @@ public class App {
 						int textureIndex = getTextureIndexByName(textures,el);
 						if (textureIndex == -1) //But this is a new material
 						{
-							System.out.println("Missing Material: "+ vmt.basetexture);
+							printProgressBar("Missing Material: "+ vmt.basetexture);
 							textures.add(new Texture(el,vmt.basetexture,"",1,1));
 						}
 					}
@@ -1336,15 +1370,23 @@ public class App {
 				}
 			}
 		}
+
+		//
+		// Process Entities
+		//
 		
-		System.out.println("[4/?] Processing models...");
+		System.out.println("[4/5] Processing entities...");
 
 		if (vmf.entities != null) { //There are no entities in this VMF
-			for (Entity entity : vmf.entities)
+			pbb = new ProgressBarBuilder()
+				.setStyle(ProgressBarStyle.ASCII)
+				.setTaskName("Processing entities...")
+				.showSpeed();
+			for (Entity entity : ProgressBar.wrap(Arrays.asList(vmf.entities),pbb))
 			{
 				if (entity.classname.contains("prop_")) { //If the entity is a prop
 					if (entity.model == null) {
-						System.out.println("Prop has no model? "+entity.classname);
+						printProgressBar("Prop has no model? "+entity.classname);
 						continue;
 					}
 					verticies.clear();
@@ -1394,11 +1436,11 @@ public class App {
 					try {
 						qcText = readFile(new File(outPath).getParent()+File.separator+entity.model.substring(0, entity.model.lastIndexOf('.'))+".qc"); // This line may cause errors if the qc file does not have the same name as the mdl file
 					}catch (IOException e) {
-						System.out.println("Exception Occured: " + e.toString());
+						//System.out.println("Exception Occured: " + e.toString());
 					}
 					if (qcText.matches(""))
 					{
-						System.out.println("Error: Could not find QC file for model, skipping: "+entity.model);
+						printProgressBar("Error: Could not find QC file for model, skipping: "+entity.model);
 						continue;
 					}
 					
@@ -1472,7 +1514,7 @@ public class App {
 							if (!VMTText.isEmpty()) {break;}
 						}
 						if (VMTText.isEmpty()) {
-							System.out.println("Could not find material: " + el);
+							printProgressBar("Could not find material: " + el);
 							continue;
 						}
 
@@ -1636,7 +1678,7 @@ public class App {
 							int textureIndex = getTextureIndexByName(textures,el);
 							if (textureIndex == -1) //But this is a new material
 							{
-								System.out.println("Missing Material: "+ vmt.basetexture);
+								printProgressBar("Missing Material: "+ vmt.basetexture);
 								textures.add(new Texture(el,vmt.basetexture,"",1,1));
 							}
 						}
@@ -1679,8 +1721,12 @@ public class App {
 			}
 		}
 
+
+		//
+		// Clean up
+		//
 		
-		System.out.println("[5/?] Cleaning up...");
+		System.out.println("[5/5] Cleaning up...");
 
 		if (vmf.entities != null) //There are no entities in this VMF
 			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString())); //Delete models. Everything is now in the OBJ file
@@ -1690,6 +1736,6 @@ public class App {
 		objFile.close();
 		materialFile.close();
 
-		System.out.println("Conversion complete!");
+		System.out.println("Conversion complete! Output can be found at: "+Paths.get(outPath).getParent());
 	}
 }

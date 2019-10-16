@@ -6,7 +6,7 @@ A work-in-progress Java application to convert VMF files into OBJ files with mat
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUT_FOLDER] [VPK_PATH]`
+`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar <inFile> <outPath> <vpkPath> [externalResourcesPath]`
 
 ## Packaged Dependencies
 
@@ -18,6 +18,7 @@ This project packages the following software and uses them during the conversion
 ## TODO
 
 ### Process
+
 - [X] Read Brush Geometry
     - [X] Deserialize data
     - [X] Complete data (three points make a *bounded* plane)
@@ -38,9 +39,10 @@ This project packages the following software and uses them during the conversion
 - [X] Clean up
 
 ### Support
-- [ ] Input Resources
+
+- [X] Input Resources
     - [X] From VPK
-    - [ ] From external source (i.e decompiled map)
+    - [X] From external source (i.e decompiled map)
 - [X] Brushes
     - [X] Regular Geometry
     - [X] Irregular Geometry
@@ -62,11 +64,11 @@ This project packages the following software and uses them during the conversion
 
 ### To do list
 
-- Rebuild argument system
-- Add support for external resources
+- Rebuild argument system?
 - Add progress bars for each step
 
 ### Feature Wishlist
+
 This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
 
 - [ ] Optimizations
@@ -74,8 +76,10 @@ This list contains little improvements that while dont HAVE to be done, they wou
     - [ ] Collapse Vertex Normals
     - [ ] Collapse *almost* duplicate verticies
     - [ ] Sort faces by texture
+    - [ ] Recycle prop data
 
 ### Unsupported Features
+
 These are features that I don't have any plans to implement, either because I don't know how to, or the feature is too inconsistant, or would require extreme reworks to the current implementation. Of course, if you have an idea on how to implement any of these please feel free to submit a PR or issue discussing the idea.
 
 - [ ] prop_* skins

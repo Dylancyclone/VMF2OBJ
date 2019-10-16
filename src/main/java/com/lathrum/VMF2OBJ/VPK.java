@@ -126,7 +126,7 @@ public class VPK
 						}
 						
 						//create entry
-						Entry entry = new Entry(this, archiveIndex, preloadData, filename, extension, crc, entryOffset, entryLength, terminator, path);
+						VPKEntry entry = new VPKEntry(this, archiveIndex, preloadData, filename, extension, crc, entryOffset, entryLength, terminator, path);
 						directory.addEntry(entry);
 					}
 				}

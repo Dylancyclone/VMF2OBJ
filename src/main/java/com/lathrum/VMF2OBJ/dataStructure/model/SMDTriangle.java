@@ -1,9 +1,11 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.model;
 
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class SMDTriangle {
 	public String materialName;

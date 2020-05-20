@@ -1,4 +1,6 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure;
+
+import com.lathrum.VMF2OBJ.dataStructure.map.Side;
 
 public class Plane {
 

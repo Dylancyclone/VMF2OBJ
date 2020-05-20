@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.map;
 
 public class Solid {
 	public String id;

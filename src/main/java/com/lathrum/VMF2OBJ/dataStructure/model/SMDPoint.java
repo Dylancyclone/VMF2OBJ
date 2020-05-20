@@ -1,4 +1,6 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.model;
+
+import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class SMDPoint {
 	public Vector3 position;

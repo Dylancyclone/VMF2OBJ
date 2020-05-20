@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.texture;
 
 public class Texture {
 	public String name;

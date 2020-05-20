@@ -58,7 +58,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>App</mainClass>
+							<mainClass>com.lathrum.VMF2OBJ.App</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

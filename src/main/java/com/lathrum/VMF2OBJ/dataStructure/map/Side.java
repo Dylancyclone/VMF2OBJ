@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.map;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -6,8 +6,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-
 import com.google.gson.Gson;
+import com.lathrum.VMF2OBJ.dataStructure.Plane;
+import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class Side {
 	public String id;

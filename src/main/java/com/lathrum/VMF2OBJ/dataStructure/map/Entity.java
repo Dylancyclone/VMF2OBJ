@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.map;
 
 public class Entity {
 	public String id;

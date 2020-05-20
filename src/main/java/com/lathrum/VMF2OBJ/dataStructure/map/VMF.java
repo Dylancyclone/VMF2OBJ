@@ -1,11 +1,12 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.map;
 
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import com.google.gson.Gson;
+
+import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class VMF {
 	public Solid[] solids;

@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.fileStructure;
 
 import java.util.ArrayList;
 

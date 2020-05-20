@@ -1,8 +1,9 @@
+package com.lathrum.VMF2OBJ;
+
 import java.util.*;
 import java.util.zip.*;
 import javax.imageio.ImageIO;
 import com.google.gson.*;
-import com.lathrum.VMF2OBJ.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -15,6 +16,12 @@ import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
 import org.apache.commons.cli.*;
+
+import com.lathrum.VMF2OBJ.fileStructure.*;
+import com.lathrum.VMF2OBJ.dataStructure.*;
+import com.lathrum.VMF2OBJ.dataStructure.map.*;
+import com.lathrum.VMF2OBJ.dataStructure.model.*;
+import com.lathrum.VMF2OBJ.dataStructure.texture.*;
 
 public class App {
 

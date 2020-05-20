@@ -1,4 +1,4 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.model;
 
 import java.util.Collection;
 import java.util.LinkedList;

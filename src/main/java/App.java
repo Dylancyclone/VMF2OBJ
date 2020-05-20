@@ -15,6 +15,7 @@ import org.jline.terminal.TerminalBuilder;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
+import org.apache.commons.cli.*;
 
 public class App {
 
@@ -22,6 +23,8 @@ public class App {
 	public static Process proc;
 	public static String VTFLibPath;
 	public static String CrowbarLibPath;
+	public static boolean quietMode = false;
+	public static boolean ignoreTools = false;
 
 	public static void extractLibraries(String dir) throws URISyntaxException {
 		//Spooky scary, but I don't want to reinvent the wheel.
@@ -845,6 +848,7 @@ public class App {
 	}
 	
 	public static void printProgressBar(String text) {
+		if(quietMode) return; // Supress warnings
 		Terminal terminal;
 		int consoleWidth = 80;
 		try {
@@ -874,18 +878,53 @@ public class App {
 		// Write Models
 		// Write Materials
 
-		if (args.length < 3 || args.length > 4) {
-			System.err.println("Usage: java vmf2obj <inFile> <outPath> <vpkPath> [externalResourcesPath]");
-			return;
-		}
-
 		Scanner in;
+		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
 		PrintWriter objFile;
 		PrintWriter materialFile;
 		String outPath = args[1];
 		String objName = outPath + ".obj";
 		String matLibName = outPath + ".mtl";
 		ProgressBarBuilder pbb;
+
+		
+		//Prepare Arguments
+		CommandLineParser parser = new DefaultParser();
+		Options options = new Options();
+
+		options.addOption("h", "help", false, "Show this message");
+		options.addOption("e", "externalPath", true, "Folder for external custom content (such as materials or models)");
+		options.addOption("q", "quiet", false, "Suppress warnings");
+		options.addOption("t", "tools", false, "Ignore tool brushes");
+		try {
+			// parse the command line arguments
+			CommandLine cmd = parser.parse(options, args);
+			if(cmd.hasOption("h") || args[0].charAt(0) =='-' || args[1].charAt(0) =='-' || args[2].charAt(0) =='-') {
+				HelpFormatter formatter = new HelpFormatter();
+				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+				System.exit(0);
+			}
+			if(cmd.hasOption("e")) {
+				vpkEntries.addAll(addExtraFiles(formatPath(cmd.getOptionValue("e")), new File(cmd.getOptionValue("e"))));
+			}
+			if(cmd.hasOption("q")) {
+				quietMode = true;
+			}
+			if(cmd.hasOption("t")) {
+				ignoreTools = true;
+			}
+		}
+		catch( ParseException e ) {
+			System.err.println(e.getMessage());
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			System.exit(0);
+		}
+		catch( Exception e ) {
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			System.exit(0);
+		}
 
 
 		//Clean working directory
@@ -923,15 +962,10 @@ public class App {
 			return;
 		}
 
-		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
 		for (Directory directory : vpk.getDirectories()) {
 			for (Entry entry : directory.getEntries()) {
 				vpkEntries.add(entry);
 			}
-		}
-
-		if (args.length > 3 && args[3]!=null && !args[3].matches("")) { //If there are external resources
-			vpkEntries.addAll(addExtraFiles(formatPath(args[3]),new File(args[3])));
 		}
 
 		// Open infile
@@ -1015,7 +1049,7 @@ public class App {
 
 				for (Side side : solid.sides)
 				{
-					//if (side.material.contains("TOOLS/")){continue;}
+					if (ignoreTools && side.material.contains("TOOLS/")) {continue;}
 					materials.add(side.material.trim());
 					if (side.dispinfo == null) {
 						if (isDisplacementSolid(solid)) continue;
@@ -1253,7 +1287,7 @@ public class App {
 				
 				for (Side side : solid.sides)
 				{
-					//if (side.material.contains("TOOLS/")){continue;}
+					if (ignoreTools && side.material.contains("TOOLS/")) {continue;}
 					int index = getTextureIndexByName(textures,side.material.trim());
 					if (index==-1) {
 						continue;
@@ -1449,7 +1483,11 @@ public class App {
 					ArrayList<SMDTriangle> SMDTriangles = new ArrayList<SMDTriangle>();
 
 					for (String bodyGroup : qc.BodyGroups) {
-						String smdText = readFile(formatPath(new File(outPath).getParent()+File.separator+"models"+File.separator+qc.ModelName.substring(0, qc.ModelName.lastIndexOf('/'))+"/"+bodyGroup));
+						String path = "/";
+						if (qc.ModelName.contains("/")) {
+							path += qc.ModelName.substring(0, qc.ModelName.lastIndexOf('/'));
+						}
+						String smdText = readFile(formatPath(new File(outPath).getParent()+File.separator+"models"+path+File.separator+bodyGroup));
 						
 						SMDTriangles.addAll(Arrays.asList(parseSMD(smdText)));
 					}
@@ -1688,8 +1726,6 @@ public class App {
 					
 					for (SMDTriangle SMDTriangle : SMDTriangles)
 					{
-						//if (side.material.contains("TOOLS/")){continue;}
-
 						String buffer = "";
 
 						for (int i = 0; i < SMDTriangle.points.length; i++)

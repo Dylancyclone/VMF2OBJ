@@ -6,10 +6,10 @@ A work-in-progress Java application to convert VMF files into OBJ files with mat
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATH]`
+`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
 
 ```
-usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]
+usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
  -e,--externalPath <arg>   Folder for external custom content (such as
                            materials or models)
  -h,--help                 Show this message

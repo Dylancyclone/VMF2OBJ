@@ -295,7 +295,7 @@ public class App {
 			CommandLine cmd = parser.parse(options, args);
 			if (cmd.hasOption("h") || args[0].charAt(0) == '-' || args[1].charAt(0) == '-' || args[2].charAt(0) == '-') {
 				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 				System.exit(0);
 			}
 			if (cmd.hasOption("e")) {
@@ -310,11 +310,11 @@ public class App {
 		} catch (ParseException e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 			System.exit(0);
 		} catch (Exception e) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 			System.exit(0);
 		}
 
@@ -338,19 +338,23 @@ public class App {
 		//
 
 		// Open vpk file
-		System.out.println("[1/5] Reading VPK...");
-		File vpkFile = new File(args[2]);
-		VPK vpk = new VPK(vpkFile);
-		try {
-			vpk.load();
-		} catch (Exception e) {
-			System.err.println("Error while loading vpk file: " + e.getMessage());
-			return;
-		}
+		System.out.println("[1/5] Reading VPK file(s)...");
+		String[] vpkFiles = args[2].split(";");
+		for (String path : vpkFiles) {
 
-		for (Directory directory : vpk.getDirectories()) {
-			for (Entry entry : directory.getEntries()) {
-				vpkEntries.add(entry);
+			File vpkFile = new File(path);
+			VPK vpk = new VPK(vpkFile);
+			try {
+				vpk.load();
+			} catch (Exception e) {
+				System.err.println("Error while loading vpk file: " + e.getMessage());
+				return;
+			}
+
+			for (Directory directory : vpk.getDirectories()) {
+				for (Entry entry : directory.getEntries()) {
+					vpkEntries.add(entry);
+				}
 			}
 		}
 
@@ -494,7 +498,13 @@ public class App {
 						System.out.println("Exception Occured: " + e.toString());
 					}
 
-					VMT vmt = VMT.parseVMT(VMTText);
+					VMT vmt = new VMT();
+					try {
+						vmt = VMT.parseVMT(VMTText);
+					} catch (Exception ex) {
+						printProgressBar("Failed to parse Material: " + el);
+						continue;
+					}
 					vmt.name = el;
 					// System.out.println(gson.toJson(vmt));
 					// System.out.println(vmt.basetexture);

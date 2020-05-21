@@ -1,13 +1,15 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure.model;
+
+import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class SMDPoint {
 	public Vector3 position;
 	public Vector3 normal;
-	
+
 	public String uaxis;
 	public String vaxis;
-	
-  public SMDPoint(Vector3 position, Vector3 normal, String uaxis, String vaxis) {
+
+	public SMDPoint(Vector3 position, Vector3 normal, String uaxis, String vaxis) {
 		this.position = position;
 		this.normal = normal;
 		this.uaxis = uaxis;

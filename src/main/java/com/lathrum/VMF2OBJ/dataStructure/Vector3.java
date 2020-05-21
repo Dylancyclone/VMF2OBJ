@@ -1,4 +1,6 @@
-package com.lathrum.VMF2OBJ;
+package com.lathrum.VMF2OBJ.dataStructure;
+
+import com.lathrum.VMF2OBJ.dataStructure.map.Side;
 
 public class Vector3 {
 
@@ -208,15 +210,68 @@ public class Vector3 {
 		return this.divide(new Vector3(length,length,length));
 	}
 
+	public static Vector3 GetPlaneIntersectionPoint(Vector3[] side1, Vector3[] side2, Vector3[] side3) {
+		Plane plane1 = new Plane(side1);
+		Vector3 plane1Normal = plane1.normal().normalize();
+		Plane plane2 = new Plane(side2);
+		Vector3 plane2Normal = plane2.normal().normalize();
+		Plane plane3 = new Plane(side3);
+		Vector3 plane3Normal = plane3.normal().normalize();
+		double determinant =
+			(
+				(
+					plane1Normal.x * plane2Normal.y * plane3Normal.z +
+					plane1Normal.y * plane2Normal.z * plane3Normal.x +
+					plane1Normal.z * plane2Normal.x * plane3Normal.y
+				)
+				-
+				(
+					plane1Normal.z * plane2Normal.y * plane3Normal.x +
+					plane1Normal.y * plane2Normal.x * plane3Normal.z +
+					plane1Normal.x * plane2Normal.z * plane3Normal.y
+				)
+			);
+
+		// Can't intersect parallel planes.
+
+		if ((determinant <= 0.01 && determinant >= -0.01) || Double.isNaN(determinant)) {
+			return null;
+		}
+
+		Vector3 point =
+		(
+			Vector3.cross(plane2Normal, plane3Normal).multiply(plane1.distance()).add(
+			Vector3.cross(plane3Normal, plane1Normal).multiply(plane2.distance())).add(
+			Vector3.cross(plane1Normal, plane2Normal).multiply(plane3.distance()))
+		)
+		.divide(determinant);
+
+		return point;
+	}
+
+	public static boolean pointInHull(Vector3 point, Side[] sides) {
+
+		for (Side side : sides) {
+			Plane plane = new Plane(side);
+			Vector3 facing = point.subtract(plane.center()).normalize();
+
+			if (Vector3.dot(facing, plane.normal().normalize()) < -0.01) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	public String toString() {
 		return "("+x+","+y+","+z+")";
 	}
 
-    public boolean equals(Object obj) {
-        if (obj instanceof Vector3) {
-            return ((this.x*31 + this.y)*31 + this.z) == ((((Vector3) obj).x*31 + ((Vector3) obj).y)*31 + ((Vector3) obj).z);
-        }
-        return false;
+	public boolean equals(Object obj) {
+		if (obj instanceof Vector3) {
+			return ((this.x*31 + this.y)*31 + this.z) == ((((Vector3) obj).x*31 + ((Vector3) obj).y)*31 + ((Vector3) obj).z);
+		}
+		return false;
 	}
 
 	public int hashCode() {

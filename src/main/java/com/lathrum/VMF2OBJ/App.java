@@ -959,10 +959,20 @@ public class App {
 							continue;
 						}
 
-						VMT vmt = VMT.parseVMT(VMTText);
+						VMT vmt = new VMT();
+						try {
+							vmt = VMT.parseVMT(VMTText);
+						} catch (Exception ex) {
+							printProgressBar("Failed to parse Material: " + el);
+							continue;
+						}
 						vmt.name = el;
 						// System.out.println(gson.toJson(vmt));
 						// System.out.println(vmt.basetexture);
+						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+							printProgressBar("Material has no texture: " + el);
+							continue;
+						}
 						if (vmt.basetexture.endsWith(".vtf")) {
 							vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
 						}

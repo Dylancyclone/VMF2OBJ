@@ -87,15 +87,15 @@ public class VMT {
 			}
 			text = text.substring(startIndex, endIndex + 1);
 
-			Pattern proxiesPattern = Pattern.compile("\"proxies\""); // check if the materials has proxies
+			// Pattern proxiesPattern = Pattern.compile("\"proxies\""); // check if the materials has proxies
+			// https://developer.valvesoftware.com/wiki/Half-Life_2_Shader_Fallbacks
+			Pattern proxiesPattern = Pattern.compile("\"([^\" \\t]+)\"\\s*\\{"); // check if the materials has proxies or fallback shaders
 			Matcher proxiesMatcher = proxiesPattern.matcher(text);
-			if (proxiesMatcher.find()) {
-				if (text.charAt(proxiesMatcher.end()) == '{') {
-					int proxiesStartIndex = proxiesMatcher.end();
-					int proxiesEndIndex = findClosingBracketMatchIndex(text, proxiesStartIndex);
-
-					text = text.replace(text.substring(proxiesMatcher.start(), proxiesEndIndex + 1), ""); // snip the proxies
-				}
+			while (proxiesMatcher.find()) {
+				int proxiesStartIndex = proxiesMatcher.end() - 1;
+				int proxiesEndIndex = findClosingBracketMatchIndex(text, proxiesStartIndex);
+				text = text.replace(text.substring(proxiesMatcher.start(), proxiesEndIndex + 1), ""); // snip the proxy/fallback shader
+				proxiesMatcher = proxiesPattern.matcher(text);
 			}
 
 			text = text.replaceAll(keyValueRegex, "$1:$2,");

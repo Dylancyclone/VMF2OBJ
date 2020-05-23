@@ -431,7 +431,7 @@ public class App {
 				materials.clear();
 
 				for (Side side : solid.sides) {
-					if (ignoreTools && side.material.contains("TOOLS/")) {
+					if (ignoreTools && side.material.toLowerCase().contains("tools/")) {
 						continue;
 					}
 					materials.add(side.material.trim());
@@ -508,6 +508,10 @@ public class App {
 					vmt.name = el;
 					// System.out.println(gson.toJson(vmt));
 					// System.out.println(vmt.basetexture);
+						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+							printProgressBar("Material has no texture: " + el);
+							continue;
+						}
 					if (vmt.basetexture.endsWith(".vtf")) {
 						vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
 					}
@@ -672,7 +676,7 @@ public class App {
 				objFile.println();
 
 				for (Side side : solid.sides) {
-					if (ignoreTools && side.material.contains("TOOLS/")) {
+					if (ignoreTools && side.material.toLowerCase().contains("tools/")) {
 						continue;
 					}
 					int index = getTextureIndexByName(textures, side.material.trim());
@@ -859,6 +863,8 @@ public class App {
 					// while ((line = reader.readLine()) != null) {
 					// 	System.out.println(line);
 					// }
+					BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					while ((reader.readLine()) != null) {}
 					proc.waitFor();
 
 					String qcText = "";

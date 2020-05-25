@@ -64,7 +64,7 @@ public class VMT {
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
-		text = text.replaceAll("srgb\\?", ""); // Remove all weirdos
+		text = text.replaceAll("!?srgb\\?", ""); // Remove all weirdos
 		text = text.replaceAll("-dx10", ""); // Remove all dx10 fallback textures
 		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
 		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
@@ -89,7 +89,7 @@ public class VMT {
 
 			// Pattern proxiesPattern = Pattern.compile("\"proxies\""); // check if the materials has proxies
 			// https://developer.valvesoftware.com/wiki/Half-Life_2_Shader_Fallbacks
-			Pattern proxiesPattern = Pattern.compile("\"([^\" \\t]+)\"\\s*\\{"); // check if the materials has proxies or fallback shaders
+			Pattern proxiesPattern = Pattern.compile("((\"([^\" \\t]+)\")|(hdr)|(proxies))\\s*\\{", Pattern.CASE_INSENSITIVE); // check if the materials has proxies or fallback shaders
 			Matcher proxiesMatcher = proxiesPattern.matcher(text);
 			while (proxiesMatcher.find()) {
 				int proxiesStartIndex = proxiesMatcher.end() - 1;

@@ -65,6 +65,7 @@ public class VMT {
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
 		text = text.replaceAll("!?srgb\\?", ""); // Remove all weirdos
+		text = text.replaceAll("360\\?", ""); // Remove all weirdos
 		text = text.replaceAll("-dx10", ""); // Remove all dx10 fallback textures
 		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
 		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values

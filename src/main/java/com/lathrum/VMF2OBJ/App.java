@@ -128,8 +128,8 @@ public class App {
 	}
 
 	public static boolean deleteRecursive(File path) throws FileNotFoundException {
-		if (!path.exists())
-			throw new FileNotFoundException(path.getAbsolutePath());
+		// if (!path.exists())
+		// 	throw new FileNotFoundException(path.getAbsolutePath());
 		boolean ret = true;
 		if (path.isDirectory()) {
 			for (File f : path.listFiles()) {
@@ -140,8 +140,8 @@ public class App {
 	}
 
 	public static boolean deleteRecursiveByExtension(File path, String ext) throws FileNotFoundException {
-		if (!path.exists())
-			throw new FileNotFoundException(path.getAbsolutePath());
+		// if (!path.exists())
+		// 	throw new FileNotFoundException(path.getAbsolutePath());
 		boolean ret = true;
 		if (path.isDirectory()) {
 			for (File f : path.listFiles()) {

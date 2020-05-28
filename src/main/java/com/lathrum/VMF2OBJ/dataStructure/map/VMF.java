@@ -46,7 +46,7 @@ public class VMF {
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("(?m)^\\s*//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("\\x1B|#", ""); // Remove all illegal characters
 		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("\"Code\"(.*)", ""); // Remove gmod Lua code
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes

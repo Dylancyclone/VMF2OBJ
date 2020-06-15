@@ -256,7 +256,7 @@ public class App {
 				consoleWidth = terminal.getWidth();
 		} catch (IOException ignored) {
 		}
-		String pad = new String(new char[consoleWidth - text.length()]).replace("\0", " ");
+		String pad = new String(new char[Math.max(consoleWidth - text.length(), 0)]).replace("\0", " ");
 
 		System.out.println("\r" + text + pad);
 	}

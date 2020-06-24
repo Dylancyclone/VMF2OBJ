@@ -272,25 +272,29 @@ public class App {
 		// Convert models to OBJ
 		// Write Models
 		// Write Materials
-
-		Scanner in;
-		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
-		PrintWriter objFile;
-		PrintWriter materialFile;
-		String outPath = args[1];
-		String objName = outPath + ".obj";
-		String matLibName = outPath + ".mtl";
-		ProgressBarBuilder pbb;
-
-		// Prepare Arguments
+		
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
-
 		options.addOption("h", "help", false, "Show this message");
 		options.addOption("e", "externalPath", true, "Folder for external custom content (such as materials or models)");
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
+
+		Scanner in;
+		ProgressBarBuilder pbb;
+		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
+		PrintWriter objFile;
+		PrintWriter materialFile;
+		String outPath = "";
+		String objName = "";
+		String matLibName = "";
+
+		// Prepare Arguments
 		try {
+			outPath = args[1];
+			objName = outPath + ".obj";
+			matLibName = outPath + ".mtl";
+
 			// parse the command line arguments
 			CommandLine cmd = parser.parse(options, args);
 			if (cmd.hasOption("h") || args[0].charAt(0) == '-' || args[1].charAt(0) == '-' || args[2].charAt(0) == '-') {

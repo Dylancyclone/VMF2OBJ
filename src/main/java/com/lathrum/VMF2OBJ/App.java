@@ -128,8 +128,8 @@ public class App {
 	}
 
 	public static boolean deleteRecursive(File path) throws FileNotFoundException {
-		if (!path.exists())
-			throw new FileNotFoundException(path.getAbsolutePath());
+		// if (!path.exists())
+		// 	throw new FileNotFoundException(path.getAbsolutePath());
 		boolean ret = true;
 		if (path.isDirectory()) {
 			for (File f : path.listFiles()) {
@@ -140,8 +140,8 @@ public class App {
 	}
 
 	public static boolean deleteRecursiveByExtension(File path, String ext) throws FileNotFoundException {
-		if (!path.exists())
-			throw new FileNotFoundException(path.getAbsolutePath());
+		// if (!path.exists())
+		// 	throw new FileNotFoundException(path.getAbsolutePath());
 		boolean ret = true;
 		if (path.isDirectory()) {
 			for (File f : path.listFiles()) {
@@ -256,7 +256,7 @@ public class App {
 				consoleWidth = terminal.getWidth();
 		} catch (IOException ignored) {
 		}
-		String pad = new String(new char[consoleWidth - text.length()]).replace("\0", " ");
+		String pad = new String(new char[Math.max(consoleWidth - text.length(), 0)]).replace("\0", " ");
 
 		System.out.println("\r" + text + pad);
 	}
@@ -272,30 +272,34 @@ public class App {
 		// Convert models to OBJ
 		// Write Models
 		// Write Materials
-
-		Scanner in;
-		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
-		PrintWriter objFile;
-		PrintWriter materialFile;
-		String outPath = args[1];
-		String objName = outPath + ".obj";
-		String matLibName = outPath + ".mtl";
-		ProgressBarBuilder pbb;
-
-		// Prepare Arguments
+		
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
-
 		options.addOption("h", "help", false, "Show this message");
 		options.addOption("e", "externalPath", true, "Folder for external custom content (such as materials or models)");
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
+
+		Scanner in;
+		ProgressBarBuilder pbb;
+		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
+		PrintWriter objFile;
+		PrintWriter materialFile;
+		String outPath = "";
+		String objName = "";
+		String matLibName = "";
+
+		// Prepare Arguments
 		try {
+			outPath = args[1];
+			objName = outPath + ".obj";
+			matLibName = outPath + ".mtl";
+
 			// parse the command line arguments
 			CommandLine cmd = parser.parse(options, args);
 			if (cmd.hasOption("h") || args[0].charAt(0) == '-' || args[1].charAt(0) == '-' || args[2].charAt(0) == '-') {
 				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 				System.exit(0);
 			}
 			if (cmd.hasOption("e")) {
@@ -310,11 +314,11 @@ public class App {
 		} catch (ParseException e) {
 			System.err.println(e.getMessage());
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 			System.exit(0);
 		} catch (Exception e) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATH] [args...]", options, false);
+			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
 			System.exit(0);
 		}
 
@@ -338,19 +342,23 @@ public class App {
 		//
 
 		// Open vpk file
-		System.out.println("[1/5] Reading VPK...");
-		File vpkFile = new File(args[2]);
-		VPK vpk = new VPK(vpkFile);
-		try {
-			vpk.load();
-		} catch (Exception e) {
-			System.err.println("Error while loading vpk file: " + e.getMessage());
-			return;
-		}
+		System.out.println("[1/5] Reading VPK file(s)...");
+		String[] vpkFiles = args[2].split(";");
+		for (String path : vpkFiles) {
 
-		for (Directory directory : vpk.getDirectories()) {
-			for (Entry entry : directory.getEntries()) {
-				vpkEntries.add(entry);
+			File vpkFile = new File(path);
+			VPK vpk = new VPK(vpkFile);
+			try {
+				vpk.load();
+			} catch (Exception e) {
+				System.err.println("Error while loading vpk file: " + e.getMessage());
+				return;
+			}
+
+			for (Directory directory : vpk.getDirectories()) {
+				for (Entry entry : directory.getEntries()) {
+					vpkEntries.add(entry);
+				}
 			}
 		}
 
@@ -427,7 +435,7 @@ public class App {
 				materials.clear();
 
 				for (Side side : solid.sides) {
-					if (ignoreTools && side.material.contains("TOOLS/")) {
+					if (ignoreTools && side.material.toLowerCase().contains("tools/")) {
 						continue;
 					}
 					materials.add(side.material.trim());
@@ -494,10 +502,20 @@ public class App {
 						System.out.println("Exception Occured: " + e.toString());
 					}
 
-					VMT vmt = VMT.parseVMT(VMTText);
+					VMT vmt = new VMT();
+					try {
+						vmt = VMT.parseVMT(VMTText);
+					} catch (Exception ex) {
+						printProgressBar("Failed to parse Material: " + el);
+						continue;
+					}
 					vmt.name = el;
 					// System.out.println(gson.toJson(vmt));
 					// System.out.println(vmt.basetexture);
+						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+							printProgressBar("Material has no texture: " + el);
+							continue;
+						}
 					if (vmt.basetexture.endsWith(".vtf")) {
 						vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
 					}
@@ -662,7 +680,7 @@ public class App {
 				objFile.println();
 
 				for (Side side : solid.sides) {
-					if (ignoreTools && side.material.contains("TOOLS/")) {
+					if (ignoreTools && side.material.toLowerCase().contains("tools/")) {
 						continue;
 					}
 					int index = getTextureIndexByName(textures, side.material.trim());
@@ -849,6 +867,8 @@ public class App {
 					// while ((line = reader.readLine()) != null) {
 					// 	System.out.println(line);
 					// }
+					BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					while ((reader.readLine()) != null) {}
 					proc.waitFor();
 
 					String qcText = "";
@@ -949,10 +969,20 @@ public class App {
 							continue;
 						}
 
-						VMT vmt = VMT.parseVMT(VMTText);
+						VMT vmt = new VMT();
+						try {
+							vmt = VMT.parseVMT(VMTText);
+						} catch (Exception ex) {
+							printProgressBar("Failed to parse Material: " + el);
+							continue;
+						}
 						vmt.name = el;
 						// System.out.println(gson.toJson(vmt));
 						// System.out.println(vmt.basetexture);
+						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+							printProgressBar("Material has no texture: " + el);
+							continue;
+						}
 						if (vmt.basetexture.endsWith(".vtf")) {
 							vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
 						}

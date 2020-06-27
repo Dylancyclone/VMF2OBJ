@@ -45,9 +45,10 @@ public class VMF {
 		String cleanUpRegex = ",([}\\]])";
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
-		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
+		text = text.replaceAll("(?m)^\\s*//(.*)", ""); // Remove all commented lines
+		text = text.replaceAll("\\x1B|#", ""); // Remove all illegal characters
 		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
+		text = text.replaceAll("\"Code\"(.*)", ""); // Remove gmod Lua code
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" \"", "\"\""); // Remove all whitespaces and newlines not in quotes
 		// text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
@@ -95,11 +96,11 @@ public class VMF {
 
 									disp = disp.replace(disp.substring(normalsMatcher.start(), normalEndIndex + 1), ""); // snip this section
 
-									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.E-]+ ?)+)\"");
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.Ee-]+ ?)+)\"");
 									Matcher rowsMatcher = rowsPattern.matcher(normal);
 									while (rowsMatcher.find()) {
 										String vectors = "";
-										Pattern vectorPattern = Pattern.compile("([0-9.E-]+) ([0-9.E-]+) ([0-9.E-]+)");
+										Pattern vectorPattern = Pattern.compile("([0-9.Ee-]+) ([0-9.Ee-]+) ([0-9.Ee-]+)");
 										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
 										while (vectorMatcher.find()) {
 											vectors = vectors + "{\"x\":" + Double.parseDouble(vectorMatcher.group(1)) + ",\"y\":"
@@ -123,11 +124,11 @@ public class VMF {
 
 									disp = disp.replace(disp.substring(distancesMatcher.start(), distanceEndIndex + 1), ""); // snip this section
 
-									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.E-]+ ?)+)\"");
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.Ee-]+ ?)+)\"");
 									Matcher rowsMatcher = rowsPattern.matcher(distance);
 									while (rowsMatcher.find()) {
 										String vectors = "";
-										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.E-]+)");
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.Ee-]+)");
 										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
 										while (vectorMatcher.find()) {
 											vectors = vectors + Double.parseDouble(vectorMatcher.group(1)) + ",";
@@ -149,11 +150,11 @@ public class VMF {
 
 									disp = disp.replace(disp.substring(alphasMatcher.start(), alphaEndIndex + 1), ""); // snip this section
 
-									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.E-]+ ?)+)\"");
+									Pattern rowsPattern = Pattern.compile("\"row[0-9]+\"\"((?:[0-9.Ee-]+ ?)+)\"");
 									Matcher rowsMatcher = rowsPattern.matcher(alpha);
 									while (rowsMatcher.find()) {
 										String vectors = "";
-										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.E-]+)");
+										Pattern vectorPattern = Pattern.compile("((?<!w[0-9]?)[0-9.Ee-]+)");
 										Matcher vectorMatcher = vectorPattern.matcher(rowsMatcher.group(1));
 										while (vectorMatcher.find()) {
 											vectors = vectors + Double.parseDouble(vectorMatcher.group(1)) + ",";

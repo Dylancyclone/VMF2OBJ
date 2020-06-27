@@ -1,12 +1,14 @@
 # VMF2OBJ
 
-A work-in-progress Java application to convert VMF files into OBJ files with materials (including brushes, displacements, entities, and models). This project is no where near complete, but updates are slowly being made.
+Convert source-engine VMF files from any game into OBJ files with materials (including brushes, displacements, entities, and models)
+
+[![Youtube demonstration](https://img.youtube.com/vi/3CgoCSRIGqI/0.jpg)](https://www.youtube.com/watch?v=3CgoCSRIGqI)
 
 ## How to run
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-0.0.1-SNAPSHOT-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
+`mvn package;java -jar ./target/VMF2OBJ-1.0.0-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
 
 ```
 usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
@@ -17,6 +19,12 @@ usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
  -t,--tools                Ignore tool brushes
 ```
 
+Example:
+
+```
+java -jar .\vmf2obj.jar .\input.vmf .\output "C:\Program Files (x86)\Steam\steamapps\common\Half-Life 2\hl2\pak01_dir.vpk" -e "C:\path\to\custom\content" -t
+```
+
 ## Packaged Dependencies
 
 This project packages the following software and uses them during the conversion process. This project would not be possible without them.
@@ -24,67 +32,19 @@ This project packages the following software and uses them during the conversion
 - [VTFLib by Nem](http://nemesis.thewavelength.net/index.php?p=40) v1.3.3
 - [Crowbar-Command-Line by ZeqMacaw and UltraTechX](https://github.com/UltraTechX/Crowbar-Command-Line) 0.68-v1
 
-## TODO
+## Support
 
-### Process
-
-- [x] Read Brush Geometry
-  - [x] Deserialize data
-  - [x] Complete data (three points make a _bounded_ plane)
-- [x] Collapse Brush Vertices
-- [x] Write Brushes
-- [x] Extract Models
-  - [x] VPK integration
-- [x] Extract materials
-  - [x] Basic VTFs
-  - [x] VMTs
-- [x] Convert Materials
-  - [x] VTFLib?
-- [x] Convert models to SMD
-  - [x] Crowbar?
-- [x] Convert models to OBJ
-- [x] Write Models
-- [x] Write Materials
-- [x] Clean up
-
-### Support
-
-- [x] Input Resources
-  - [x] From VPK
-  - [x] From external source (i.e decompiled map)
-- [x] Brushes
-  - [x] Regular Geometry
-  - [x] Irregular Geometry
-  - [x] Materials
-    - [x] Basic VTFs
-    - [x] VMTs
-      - [x] Basic
-      - [x] Advanced
-  - [x] Displacements
-    - [x] Geometry
-    - [x] Materials
-- [x] Entities
-  - [x] Brush entities
-  - [x] Point Entities
-    - [x] prop\_\*
-      - [x] Geometry
-      - [x] Geometry Normals
-      - [x] Materials
-
-### To do list
-
-- Rebuild argument system
-
-### Feature Wishlist
-
-This list contains little improvements that while dont HAVE to be done, they would be nice and could improve the performance of the application a little.
-
-- [ ] Optimizations
-  - [ ] Collapse Vertex Textures
-  - [ ] Collapse Vertex Normals
-  - [ ] Collapse _almost_ duplicate verticies
-  - [ ] Sort faces by texture
-  - [ ] Recycle prop data
+- Brushes
+- Displacements
+- Materials
+  - Textures
+  - Bump Maps
+  - Transparency
+- Brush Entities
+- prop\_\* Entities
+  - Geometry
+  - Geometry Normals
+  - Materials
 
 ### Unsupported Features
 

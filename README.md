@@ -2,6 +2,8 @@
 
 Convert source-engine VMF files from any game into OBJ files with materials (including brushes, displacements, entities, and models)
 
+Watch a demonstration video:
+
 [![Youtube demonstration](https://img.youtube.com/vi/3CgoCSRIGqI/0.jpg)](https://www.youtube.com/watch?v=3CgoCSRIGqI)
 
 ## How to run

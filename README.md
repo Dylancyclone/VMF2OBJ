@@ -14,8 +14,9 @@ From the root directory, run:
 
 ```
 usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
- -e,--externalPath <arg>   Folder for external custom content (such as
-                           materials or models)
+ -e,--externalPath <arg>   Semi-colon separated list of folders for
+                           external custom content (such as materials or
+                           models)
  -h,--help                 Show this message
  -q,--quiet                Suppress warnings
  -t,--tools                Ignore tool brushes
@@ -24,7 +25,7 @@ usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
 Example:
 
 ```
-java -jar .\vmf2obj.jar .\input.vmf .\output "C:\Program Files (x86)\Steam\steamapps\common\Half-Life 2\hl2\pak01_dir.vpk" -e "C:\path\to\custom\content" -t
+java -jar .\vmf2obj.jar .\input.vmf .\output "D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_misc_dir.vpk;D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_textures_dir.vpk" -e "C:\path\to\custom\content\;C:\path\to\more\custom\content\" -t
 ```
 
 ## Packaged Dependencies

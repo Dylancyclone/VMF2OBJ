@@ -276,7 +276,7 @@ public class App {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
 		options.addOption("h", "help", false, "Show this message");
-		options.addOption("e", "externalPath", true, "Folder for external custom content (such as materials or models)");
+		options.addOption("e", "externalPath", true, "Semi-colon separated list of folders for external custom content (such as materials or models)");
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
 
@@ -303,7 +303,10 @@ public class App {
 				System.exit(0);
 			}
 			if (cmd.hasOption("e")) {
-				vpkEntries.addAll(addExtraFiles(formatPath(cmd.getOptionValue("e")), new File(cmd.getOptionValue("e"))));
+				String[] externalFolders = cmd.getOptionValue("e").split(";");
+				for (String path : externalFolders) {
+					vpkEntries.addAll(addExtraFiles(path, new File(path)));
+				}
 			}
 			if (cmd.hasOption("q")) {
 				quietMode = true;

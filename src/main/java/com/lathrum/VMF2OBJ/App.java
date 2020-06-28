@@ -276,7 +276,7 @@ public class App {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
 		options.addOption("h", "help", false, "Show this message");
-		options.addOption("e", "externalPath", true, "Folder for external custom content (such as materials or models)");
+		options.addOption("e", "externalPath", true, "Semi-colon separated list of folders for external custom content (such as materials or models)");
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
 
@@ -303,7 +303,10 @@ public class App {
 				System.exit(0);
 			}
 			if (cmd.hasOption("e")) {
-				vpkEntries.addAll(addExtraFiles(formatPath(cmd.getOptionValue("e")), new File(cmd.getOptionValue("e"))));
+				String[] externalFolders = cmd.getOptionValue("e").split(";");
+				for (String path : externalFolders) {
+					vpkEntries.addAll(addExtraFiles(path, new File(path)));
+				}
 			}
 			if (cmd.hasOption("q")) {
 				quietMode = true;
@@ -906,6 +909,7 @@ public class App {
 					radAngles[0] = Double.parseDouble(angles[0]) * Math.PI / 180;
 					radAngles[1] = (Double.parseDouble(angles[1]) + 90) * Math.PI / 180;
 					radAngles[2] = Double.parseDouble(angles[2]) * Math.PI / 180;
+					double scale = entity.uniformscale != null ? Double.parseDouble(entity.uniformscale) : 1.0;
 					String[] origin = entity.origin.split(" ");
 					Vector3 transform = new Vector3(Double.parseDouble(origin[0]), Double.parseDouble(origin[1]),
 							Double.parseDouble(origin[2]));
@@ -919,6 +923,7 @@ public class App {
 							// Or what would normally be read as XZY
 							temp.points[j].position = temp.points[j].position.rotate3D(radAngles[0], radAngles[2], radAngles[1]);
 
+							temp.points[j].position = temp.points[j].position.multiply(scale);
 							temp.points[j].position = temp.points[j].position.add(transform);
 							verticies.add(temp.points[j].position);
 						}

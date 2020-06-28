@@ -10,12 +10,13 @@ Watch a demonstration video:
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-1.0.0-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
+`mvn package;java -jar ./target/VMF2OBJ-1.1.0-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
 
 ```
 usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
- -e,--externalPath <arg>   Folder for external custom content (such as
-                           materials or models)
+ -e,--externalPath <arg>   Semi-colon separated list of folders for
+                           external custom content (such as materials or
+                           models)
  -h,--help                 Show this message
  -q,--quiet                Suppress warnings
  -t,--tools                Ignore tool brushes
@@ -24,7 +25,7 @@ usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
 Example:
 
 ```
-java -jar .\vmf2obj.jar .\input.vmf .\output "C:\Program Files (x86)\Steam\steamapps\common\Half-Life 2\hl2\pak01_dir.vpk" -e "C:\path\to\custom\content" -t
+java -jar .\vmf2obj.jar .\input.vmf .\output "D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_misc_dir.vpk;D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_textures_dir.vpk" -e "C:\path\to\custom\content\;C:\path\to\more\custom\content\" -t
 ```
 
 ## Packaged Dependencies
@@ -60,3 +61,7 @@ These are features that I don't have any plans to implement, either because I do
   - infodecal entities don't store any data about where the decal is displayed, meaning it is projected from it's origin to the brush and clipped/sized accordingly. I personally don't know enough about how this process is done, and I don't feel comfortable trying to brute force it. I looked around for the source code associated with it, but I could not find anything to reverse engineer. I know it's a pretty important feature, but I don't know how to make it work _correctly_.
 - [ ] info_overlay
   - info_overlay is basically nextgen infodecal. Instead of just projecting to one side, an info_overlay can be projected to multiple faces, including different orientations and brushes so that the decal can "wrap" around. Again, I honestly don't really know how to approach this without brute forcing every face to create a seperate object with it's own UV wrapping. And that doesn't even include the fact that info_overlays can be distorted before being placed.
+
+## Other Notes
+
+Depending on where you import the converted result to, you might run into a problem where all the geometry looks very dark. This is due to the Source engine using additional normal data that might cause side effects in other software. In Blender, this can be solved with [this quick script](https://gist.github.com/Dylancyclone/d9bd1b53dbdd02702814661d8d82be5d). Simply select all the objects, and run this script in a new text editor. See [this](https://youtu.be/3CgoCSRIGqI?t=334) for more information.

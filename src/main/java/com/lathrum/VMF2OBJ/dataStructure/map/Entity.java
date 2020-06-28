@@ -5,6 +5,7 @@ public class Entity {
 	public String classname;
 	public String angles;
 	public String origin;
+	public String uniformscale;
 
 	public String model;
 	public String skin;

@@ -183,7 +183,7 @@ public class App {
 	public static ArrayList<Integer> getEntryIndiciesByPattern(ArrayList<Entry> object, String pattern) {
 		ArrayList<Integer> indicies = new ArrayList<Integer>();
 		for (int i = 0; i < object.size(); i++) {
-			if (object != null && object.get(i).getFullPath().contains(pattern)) {
+			if (object != null && object.get(i).getFullPath().toLowerCase().contains(pattern.toLowerCase())) {
 				indicies.add(i);
 			}
 			// else{System.out.println(object.get(i).getFullPath());}
@@ -455,15 +455,17 @@ public class App {
 						// -or-
 						// A D
 						// B C
-						Vector3 ad = side.points[3].subtract(side.points[0]);
-						Vector3 ab = side.points[1].subtract(side.points[0]);
+						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
+						//Get adjacent points by going around counter-clockwise
+						Vector3 ad = side.points[(startIndex+1)%4].subtract(side.points[startIndex]);
+						Vector3 ab = side.points[(startIndex+3)%4].subtract(side.points[startIndex]);
 						// System.out.println(ad);
 						// System.out.println(ab);
 						for (int i = 0; i < side.dispinfo.normals.length; i++) // rows
 						{
 							for (int j = 0; j < side.dispinfo.normals[0].length; j++) // columns
 							{
-								Vector3 point = side.points[0]
+								Vector3 point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
@@ -728,14 +730,16 @@ public class App {
 						// -or-
 						// A D
 						// B C
-						Vector3 ad = side.points[3].subtract(side.points[0]);
-						Vector3 ab = side.points[1].subtract(side.points[0]);
+						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
+						//Get adjacent points by going around counter-clockwise
+						Vector3 ad = side.points[(startIndex+1)%4].subtract(side.points[startIndex]);
+						Vector3 ab = side.points[(startIndex+3)%4].subtract(side.points[startIndex]);
 						for (int i = 0; i < side.dispinfo.normals.length - 1; i++) // all rows but last
 						{
 							for (int j = 0; j < side.dispinfo.normals[0].length - 1; j++) // all columns but last
 							{
 								buffer = "";
-								Vector3 point = side.points[0]
+								Vector3 point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
@@ -749,7 +753,7 @@ public class App {
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset) + " ";
 
-								point = side.points[0]
+								point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
 										.add(side.dispinfo.normals[i + 1][j].multiply(side.dispinfo.distances[i + 1][j]));
@@ -763,7 +767,7 @@ public class App {
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 1) + " ";
 
-								point = side.points[0]
+								point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
 										.add(side.dispinfo.normals[i + 1][j + 1].multiply(side.dispinfo.distances[i + 1][j + 1]));
@@ -777,7 +781,7 @@ public class App {
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 2) + " ";
 
-								point = side.points[0]
+								point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
 										.add(side.dispinfo.normals[i][j + 1].multiply(side.dispinfo.distances[i][j + 1]));

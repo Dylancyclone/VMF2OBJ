@@ -210,6 +210,34 @@ public class Vector3 {
 		return this.divide(new Vector3(length,length,length));
 	}
 
+	public static double distance(Vector3 vectorA, Vector3 vectorB) {
+		return Math.sqrt(
+				Math.pow(vectorA.x - vectorB.x, 2) + Math.pow(vectorA.y - vectorB.y, 2) + Math.pow(vectorA.z - vectorB.z, 2));
+	}
+
+	public double distance(Vector3 vector) {
+		return Math.sqrt(Math.pow(this.x - vector.x, 2) + Math.pow(this.y - vector.y, 2) + Math.pow(this.z - vector.z, 2));
+	}
+
+	public int closestIndex(Vector3[] vectors) {
+		if (vectors.length == 0) {
+			return -1;
+		} else if (vectors.length == 1) {
+			return 0;
+		} else {
+			int index = 0;
+			double distance = this.distance(vectors[0]);
+			for (int i = 1; i < vectors.length; i++) {
+				double thisDistance = this.distance(vectors[i]);
+				if (thisDistance < distance) {
+					index = i;
+					distance = thisDistance;
+				}
+			}
+			return index;
+		}
+	}
+
 	public static Vector3 GetPlaneIntersectionPoint(Vector3[] side1, Vector3[] side2, Vector3[] side3) {
 		Plane plane1 = new Plane(side1);
 		Vector3 plane1Normal = plane1.normal().normalize();

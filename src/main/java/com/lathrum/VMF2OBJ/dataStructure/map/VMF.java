@@ -168,6 +168,7 @@ public class VMF {
 							disp = disp.replaceAll(objectRegex, ",\"$1\":$2");
 							disp = disp.replaceAll(keyValueRegex, "$1:$2,");
 							disp = disp.replaceAll(",,", ",");
+							disp = disp.replaceAll("\"startposition\":\"\\[(.+?) (.+?) (.+?)\\]\"", "\"startposition\":{\"x\":$1,\"y\":$2,\"z\":$3}"); // Format start position
 							normals = ",\"normals\":[" + normals.substring(0, normals.length() - 1) + "]";
 							disp = splice(disp, normals, disp.length() - 1);
 							distances = ",\"distances\":[" + distances.substring(0, distances.length() - 1) + "]";

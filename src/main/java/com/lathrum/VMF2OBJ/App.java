@@ -183,7 +183,7 @@ public class App {
 	public static ArrayList<Integer> getEntryIndiciesByPattern(ArrayList<Entry> object, String pattern) {
 		ArrayList<Integer> indicies = new ArrayList<Integer>();
 		for (int i = 0; i < object.size(); i++) {
-			if (object != null && object.get(i).getFullPath().contains(pattern)) {
+			if (object != null && object.get(i).getFullPath().toLowerCase().contains(pattern.toLowerCase())) {
 				indicies.add(i);
 			}
 			// else{System.out.println(object.get(i).getFullPath());}

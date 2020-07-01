@@ -57,7 +57,8 @@ public class App {
 		try {
 			uri = App.class.getProtectionDomain().getCodeSource().getLocation().toURI();
 		} catch (Exception e) {
-			System.err.println("Exception: " + e);
+			System.err.println("Failed to get executable's location, do you have permissions?");
+			System.err.println(e.toString());
 		}
 
 		for (String el : files) {
@@ -79,7 +80,8 @@ public class App {
 					zipFile.close();
 				}
 			} catch (Exception e) {
-				System.err.println("Exception: " + e);
+				System.err.println("Failed to extract tools, do you have permissions?");
+				System.err.println(e.toString());
 			}
 		}
 	}
@@ -96,7 +98,7 @@ public class App {
 		entry = zipFile.getEntry(fileName);
 
 		if (entry == null) {
-			throw new FileNotFoundException("cannot find file: " + fileName + " in archive: " + zipFile.getName());
+			throw new FileNotFoundException("Cannot find file: " + fileName + " in archive: " + zipFile.getName());
 		}
 
 		zipStream = zipFile.getInputStream(entry);
@@ -236,7 +238,8 @@ public class App {
 				}
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.err.println("Failed to load external resources");
+			System.err.println(e.toString());
 		}
 		return entries;
 	}
@@ -325,6 +328,12 @@ public class App {
 			System.exit(0);
 		}
 
+		// Check for valid arguments
+		if (Paths.get(outPath).getParent() == null) {
+			System.err.println("Invalid output file. Make sure it's either an absolute or relative path");
+			System.exit(0);
+		}
+
 		// Clean working directory
 		try {
 			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()),"vtf");
@@ -337,7 +346,8 @@ public class App {
 		try {
 			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
 		} catch (Exception e) {
-			System.err.println("Exception: " + e);
+			System.err.println("Failed to extract tools, do you have permissions?");
+			System.err.println(e.toString());
 		}
 
 		//
@@ -365,26 +375,13 @@ public class App {
 			}
 		}
 
-		// Open infile
-		File workingFile = new File(args[0]);
-		if (!workingFile.exists()) {
-			try {
-				File directory = new File(workingFile.getParent());
-				if (!directory.exists()) {
-					directory.mkdirs();
-				}
-				workingFile.createNewFile();
-			} catch (IOException e) {
-				System.out.println("Exception Occured: " + e.toString());
-			}
-		}
-
-		// Read File
+		// Read input file
 		String text = "";
 		try {
 			text = readFile(args[0]);
 		} catch (IOException e) {
-			System.out.println("Exception Occured: " + e.toString());
+			System.err.println("Failed to read file: " + args[0] + ", does file exist?");
+			System.err.println(e.toString());
 		}
 		// System.out.println(text);
 
@@ -504,7 +501,8 @@ public class App {
 						}
 						VMTText = new String(vpkEntries.get(index).readData());
 					} catch (IOException e) {
-						System.out.println("Exception Occured: " + e.toString());
+						System.out.println("Failed to read material: " + el);
+						System.err.println(e.toString());
 					}
 
 					VMT vmt = new VMT();
@@ -537,7 +535,8 @@ public class App {
 									directory.mkdirs();
 								}
 							} catch (Exception e) {
-								System.out.println("Exception Occured: " + e.toString());
+								System.out.println("Failed to create directory: " + materialOutPath.getParent());
+								System.err.println(e.toString());
 							}
 							try {
 								vpkEntries.get(index).extract(materialOutPath);
@@ -581,7 +580,8 @@ public class App {
 								// System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(), width, height));
 							} catch (Exception e) {
-								System.err.println("Exception on extract: " + e);
+								System.err.println("Failed to extract material: " + vmt.basetexture);
+								System.err.println(e.toString());
 							}
 
 							if (vmt.bumpmap != null) { // If the material has a bump map associated with it
@@ -602,7 +602,8 @@ public class App {
 												directory.mkdirs();
 											}
 										} catch (Exception e) {
-											System.out.println("Exception Occured: " + e.toString());
+											System.out.println("Failed to create directory: " + materialOutPath.getParent());
+											System.err.println(e.toString());
 										}
 										try {
 											vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
@@ -614,7 +615,8 @@ public class App {
 											proc = Runtime.getRuntime().exec(command);
 											proc.waitFor();
 										} catch (Exception e) {
-											System.err.println("Exception on extract: " + e);
+											System.err.println("Failed to extract bump material: " + vmt.bumpmap);
+											System.err.println(e.toString());
 										}
 									}
 								}
@@ -853,12 +855,14 @@ public class App {
 										directory.mkdirs();
 									}
 								} catch (Exception e) {
-									System.out.println("Exception Occured: " + e.toString());
+									System.out.println("Failed to create directory: " + fileOutPath.getParent());
+									System.err.println(e.toString());
 								}
 								try {
 									vpkEntries.get(index).extract(fileOutPath);
 								} catch (Exception e) {
-									System.err.println("Exception on extract: " + e);
+									System.err.println("Failed to extract: " + fileOutPath);
+									System.err.println(e.toString());
 								}
 							}
 						}
@@ -967,7 +971,8 @@ public class App {
 								} // Could not find it
 								VMTText = new String(vpkEntries.get(index).readData());
 							} catch (IOException e) {
-								System.out.println("Exception Occured: " + e.toString());
+								System.out.println("Failed to read material: " + el);
+								System.err.println(e.toString());
 							}
 							if (!VMTText.isEmpty()) {
 								break;
@@ -1052,7 +1057,8 @@ public class App {
 									// System.out.println("Adding Material: "+ el);
 									textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(), width, height));
 								} catch (Exception e) {
-									System.err.println("Exception on extract: " + e);
+									System.err.println("Failed to extract material: " + vmt.basetexture);
+									System.err.println(e.toString());
 								}
 
 								if (vmt.bumpmap != null) { // If the material has a bump map associated with it
@@ -1073,7 +1079,8 @@ public class App {
 													directory.mkdirs();
 												}
 											} catch (Exception e) {
-												System.out.println("Exception Occured: " + e.toString());
+												System.out.println("Failed to create directory: " + bumpMapOutPath.getParent());
+												System.err.println(e.toString());
 											}
 											try {
 												vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
@@ -1085,7 +1092,8 @@ public class App {
 												proc = Runtime.getRuntime().exec(convertCommand);
 												proc.waitFor();
 											} catch (Exception e) {
-												System.err.println("Exception on extract: " + e);
+												System.err.println("Failed to extract bump material: " + vmt.bumpmap);
+												System.err.println(e.toString());
 											}
 										}
 									}

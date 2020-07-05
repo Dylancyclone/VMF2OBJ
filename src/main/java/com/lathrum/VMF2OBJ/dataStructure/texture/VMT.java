@@ -3,7 +3,7 @@ package com.lathrum.VMF2OBJ.dataStructure.texture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.gson.Gson;
+import com.lathrum.VMF2OBJ.App;
 
 public class VMT {
 	public String name;
@@ -40,7 +40,6 @@ public class VMT {
 	}
 
 	public static VMT parseVMT(String text) {
-		Gson gson = new Gson();
 
 		if (text.length() > 6) {
 			if (text.substring(1, 6).equals("Water")) // If water texture
@@ -50,7 +49,7 @@ public class VMT {
 				// which shouldn't really be used anyways in this case. So we'll give it an
 				// obvious texture
 				// So it can be easily changed
-				VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+				VMT vmt = App.gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
 				return vmt;
 			}
 		}
@@ -83,7 +82,7 @@ public class VMT {
 			int endIndex = findClosingBracketMatchIndex(text, startIndex);
 			if (endIndex == -1) // Invalid vmt
 			{
-				VMT vmt = gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
+				VMT vmt = App.gson.fromJson("{\"basetexture\":\"TOOLS/TOOLSDOTTED\"}", VMT.class);
 				return vmt;
 			}
 			text = text.substring(startIndex, endIndex + 1);
@@ -107,7 +106,7 @@ public class VMT {
 		text = text.replaceAll("([a-zA-Z_]+dx[6-9])", "\"$1\":"); // Fix fallback shaders
 
 		// System.out.println(text);
-		VMT vmt = gson.fromJson(text, VMT.class);
+		VMT vmt = App.gson.fromJson(text, VMT.class);
 		return vmt;
 	}
 

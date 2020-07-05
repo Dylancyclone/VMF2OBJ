@@ -32,6 +32,10 @@ public class App {
 	public static boolean quietMode = false;
 	public static boolean ignoreTools = false;
 
+	/**
+	 * Extract Libraries to temporary directory.
+	 * @param dir Directory to extra to
+	 */
 	public static void extractLibraries(String dir) throws URISyntaxException {
 		// Spooky scary, but I don't want to reinvent the wheel.
 		ArrayList<String> files = new ArrayList<String>();
@@ -61,31 +65,35 @@ public class App {
 			System.err.println(e.toString());
 		}
 
-		for (String el : files) {
-			ZipFile zipFile;
-
-			try {
-				zipFile = new ZipFile(new File(uri));
-				try {
-					fileURI = extractFile(zipFile, el, dir);
-					switch (el) {
-						case ("VTFCmd.exe"):
-							VTFLibPath = Paths.get(fileURI).toString();
-							break;
-						case ("CrowbarCommandLineDecomp.exe"):
-							CrowbarLibPath = Paths.get(fileURI).toString();
-							break;
-					}
-				} finally {
-					zipFile.close();
+		try {
+			ZipFile zipFile = new ZipFile(new File(uri));
+			for (String el : files) {
+				fileURI = extractFile(zipFile, el, dir);
+				switch (el) {
+					case ("VTFCmd.exe"):
+						VTFLibPath = Paths.get(fileURI).toString();
+						break;
+					case ("CrowbarCommandLineDecomp.exe"):
+						CrowbarLibPath = Paths.get(fileURI).toString();
+						break;
+					default:
+						break;
 				}
-			} catch (Exception e) {
-				System.err.println("Failed to extract tools, do you have permissions?");
-				System.err.println(e.toString());
 			}
+			zipFile.close();
+		} catch (Exception e) {
+			System.err.println("Failed to extract tools, do you have permissions?");
+			System.err.println(e.toString());
 		}
 	}
 
+	/**
+	 * Extract a particular file from a zip to a particular location.
+	 * @param zipFile The zip file to extract from
+	 * @param fileName the file to extract from the zip
+	 * @param dir the destination of the extracted file
+	 * @return URI of extracted file
+	 */
 	public static URI extractFile(ZipFile zipFile, String fileName, String dir) throws IOException {
 		File tempFile;
 		ZipEntry entry;
@@ -123,12 +131,22 @@ public class App {
 		return (tempFile.toURI());
 	}
 
+	/**
+	 * Gets the extension of a file.
+	 * @param file File to get extension of
+	 * @return Extension of file
+	 */
 	public static String getFileExtension(File file) {
 		String fileName = file.getName();
 		int dotIndex = fileName.lastIndexOf('.');
 		return (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1);
 	}
 
+	/**
+	 * Deletes all files and folders starting at a directory.
+	 * @param path Folder to delete
+	 * @return If the delete was successful
+	 */
 	public static boolean deleteRecursive(File path) throws FileNotFoundException {
 		// if (!path.exists())
 		// 	throw new FileNotFoundException(path.getAbsolutePath());
@@ -141,6 +159,13 @@ public class App {
 		return ret && path.delete();
 	}
 
+
+	/**
+	 * Deletes all files with a certain extension recursively starting at a directory.
+	 * @param path Root folder to delete from
+	 * @param ext Extension of files to delete
+	 * @return If the delete was successful
+	 */
 	public static boolean deleteRecursiveByExtension(File path, String ext) throws FileNotFoundException {
 		// if (!path.exists())
 		// 	throw new FileNotFoundException(path.getAbsolutePath());
@@ -155,14 +180,25 @@ public class App {
 		return ret;
 	}
 
+	/**
+	 * Get contents of a file.
+	 * @param path location of the file
+	 * @return content of the file
+	 */
 	static String readFile(String path) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return new String(encoded, StandardCharsets.UTF_8);
 	}
 
+	/**
+	 * Format a path to use correct file separators.
+	 * @param res Path to format
+	 * @return Formatted path
+	 */
 	public static String formatPath(String res) {
-		if (res == null)
+		if (res == null) {
 			return null;
+		}
 		if (File.separatorChar == '\\') {
 			// From Windows to Linux/Mac
 			return res.replace('/', File.separatorChar);
@@ -172,6 +208,12 @@ public class App {
 		}
 	}
 
+	/**
+	 * Get index of an entry in an ArrayList by it's path.
+	 * @param object ArrayList of Entries to search
+	 * @param path Path to find
+	 * @return index of entry
+	 */
 	public static int getEntryIndexByPath(ArrayList<Entry> object, String path) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object != null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
@@ -182,6 +224,12 @@ public class App {
 		return -1;
 	}
 
+	/**
+	 * Get index of an entry in an ArrayList by an arbitrary pattern.
+	 * @param object ArrayList of Entries to search
+	 * @param pattern Path to find
+	 * @return index of entry
+	 */
 	public static ArrayList<Integer> getEntryIndiciesByPattern(ArrayList<Entry> object, String pattern) {
 		ArrayList<Integer> indicies = new ArrayList<Integer>();
 		for (int i = 0; i < object.size(); i++) {
@@ -193,6 +241,12 @@ public class App {
 		return indicies;
 	}
 
+	/**
+	 * Get index of an Texture in an ArrayList by it's name.
+	 * @param object ArrayList of Textures to search
+	 * @param name Name to find
+	 * @return index of entry
+	 */
 	public static int getTextureIndexByName(ArrayList<Texture> object, String name) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object != null && object.get(i).name.equalsIgnoreCase(name)) {
@@ -202,6 +256,12 @@ public class App {
 		return -1;
 	}
 
+	/**
+	 * Get index of an Texture in an ArrayList by it's file name.
+	 * @param object ArrayList of Textures to search
+	 * @param name File name to find
+	 * @return index of entry
+	 */
 	public static int getTextureIndexByFileName(ArrayList<Texture> object, String name) {
 		for (int i = 0; i < object.size(); i++) {
 			if (object != null && object.get(i).fileName.equalsIgnoreCase(name)) {
@@ -211,6 +271,13 @@ public class App {
 		return -1;
 	}
 
+
+	/**
+	 * Prepare external files to be used as resources.
+	 * @param start Root path to start pulling from
+	 * @param dir Current directory
+	 * @return ArrayList of new Entries
+	 */
 	public static ArrayList<Entry> addExtraFiles(String start, File dir) {
 		ArrayList<Entry> entries = new ArrayList<Entry>();
 
@@ -219,22 +286,25 @@ public class App {
 			for (File file : files) {
 				if (file.isDirectory()) {
 					String path = file.getCanonicalPath().substring(start.length());
-					if (path.charAt(0) == File.separatorChar)
+					if (path.charAt(0) == File.separatorChar) {
 						path = path.substring(1);
+					}
 					// System.out.println("directory: " + path);
 					entries.addAll(addExtraFiles(start, file));
 				} else {
 					String path = file.getCanonicalPath().substring(start.length());
-					if (path.charAt(0) == File.separatorChar)
+					if (path.charAt(0) == File.separatorChar) {
 						path = path.substring(1);
+					}
 					path = path.replaceAll("\\\\", "/");
 					// System.out.println("file: " + path);
-					if (path.lastIndexOf("/") == -1)
+					if (path.lastIndexOf("/") == -1) {
 						entries.add(new FileEntry(file.getName().substring(0, file.getName().lastIndexOf('.')),
 								getFileExtension(file), "", file.toString()));
-					else
+					} else {
 						entries.add(new FileEntry(file.getName().substring(0, file.getName().lastIndexOf('.')),
 								getFileExtension(file), path.substring(0, path.lastIndexOf("/")), file.toString()));
+					}
 				}
 			}
 		} catch (IOException e) {
@@ -244,9 +314,14 @@ public class App {
 		return entries;
 	}
 
+	/**
+	 * Print line to console without messing up the progress bar.
+	 * @param text line to print
+	 */
 	public static void printProgressBar(String text) {
-		if (quietMode)
+		if (quietMode) {
 			return; // Supress warnings
+		}
 		Terminal terminal;
 		int consoleWidth = 80;
 		try {
@@ -255,26 +330,34 @@ public class App {
 			// created
 			// see https://github.com/jline/jline3/issues/291
 			terminal = TerminalBuilder.builder().dumb(true).build();
-			if (terminal.getWidth() >= 10) // Workaround for issue #23 under IntelliJ
+			if (terminal.getWidth() >= 10)  { // Workaround for issue #23 under IntelliJ
 				consoleWidth = terminal.getWidth();
-		} catch (IOException ignored) {
-		}
+			}
+		} catch (IOException ignored) { /* */ }
 		String pad = new String(new char[Math.max(consoleWidth - text.length(), 0)]).replace("\0", " ");
 
 		System.out.println("\r" + text + pad);
 	}
 
-	public static void main(String args[]) throws Exception {
+	/**
+	 * Convert Source .vmf files to generic .obj
+	 * @param args Launch options for the program. Read the first couple lines of main to see valid inputs
+	 * @throws Exception Unhandled exception
+	 */
+	public static void main(String[] args) throws Exception {
+		// The General outline of the program is a follows:
+
 		// Read Geometry
 		// Collapse Vertices
-		// Write objects
+		// Write Objects
 		// Extract Models
-		// Extract materials
+		// Extract Materials
 		// Convert Materials
-		// Convert models to SMD
-		// Convert models to OBJ
+		// Convert Models to SMD
+		// Convert Models to OBJ
 		// Write Models
 		// Write Materials
+		// Clean Up
 		
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
@@ -336,7 +419,7 @@ public class App {
 
 		// Clean working directory
 		try {
-			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()),"vtf");
+			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf");
 			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString()));
 		} catch (Exception e) {
 			// System.err.println("Exception: "+e);
@@ -440,8 +523,9 @@ public class App {
 					}
 					materials.add(side.material.trim());
 					if (side.dispinfo == null) {
-						if (Solid.isDisplacementSolid(solid))
+						if (Solid.isDisplacementSolid(solid)) {
 							continue;
+						}
 						for (Vector3 point : side.points) {
 							verticies.add(point);
 						}
@@ -454,14 +538,12 @@ public class App {
 						// B C
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex+1)%4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex+3)%4].subtract(side.points[startIndex]);
+						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
+						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
 						// System.out.println(ad);
 						// System.out.println(ab);
-						for (int i = 0; i < side.dispinfo.normals.length; i++) // rows
-						{
-							for (int j = 0; j < side.dispinfo.normals[0].length; j++) // columns
-							{
+						for (int i = 0; i < side.dispinfo.normals.length; i++) { // rows
+							for (int j = 0; j < side.dispinfo.normals[0].length; j++) { // columns
 								Vector3 point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
 										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
@@ -515,10 +597,10 @@ public class App {
 					vmt.name = el;
 					// System.out.println(gson.toJson(vmt));
 					// System.out.println(vmt.basetexture);
-						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
-							printProgressBar("Material has no texture: " + el);
-							continue;
-						}
+					if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+						printProgressBar("Material has no texture: " + el);
+						continue;
+					}
 					if (vmt.basetexture.endsWith(".vtf")) {
 						vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
 					}
@@ -622,63 +704,61 @@ public class App {
 								}
 							}
 
-							materialFile.println("\n" + 
-							"newmtl "+el+"\n"+
-							"Ka 1.000 1.000 1.000\n"+
-							"Kd 1.000 1.000 1.000\n"+
-							"Ks 0.000 0.000 0.000\n"+
-							"d 1.0\n"+
+							materialFile.println("\n" +
+							"newmtl " + el + "\n" +
+							"Ka 1.000 1.000 1.000\n" +
+							"Kd 1.000 1.000 1.000\n" +
+							"Ks 0.000 0.000 0.000\n" +
+							"d 1.0\n" +
 							"illum 2");
-							if (vmt.translucent==1||vmt.alphatest==1) {
+							if (vmt.translucent == 1 || vmt.alphatest == 1) {
 								materialFile.println(
-								"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-								"map_Kd "+"materials/"+vmt.basetexture+".tga");
+								"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 							} else {
 								materialFile.println(
-								"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
-								"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+								"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
 							}
 							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 								materialFile.println(
-								"map_bump "+"materials/"+vmt.bumpmap+".jpg");
+								"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
 							}
 							materialFile.println();
 						} else { // File has already been extracted
 							int textureIndex = getTextureIndexByName(textures, el);
-							if (textureIndex == -1) // But this is a new material
-							{
+							if (textureIndex == -1) { // But this is a new material
 								textureIndex = getTextureIndexByFileName(textures, vmt.basetexture);
 								// System.out.println("Adding Material: "+ el);
 								textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(),
 										textures.get(textureIndex).width, textures.get(textureIndex).height));
 
-								materialFile.println("\n"+ 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
+								materialFile.println("\n" +
+								"newmtl " + el + "\n" +
+								"Ka 1.000 1.000 1.000\n" +
+								"Kd 1.000 1.000 1.000\n" +
+								"Ks 0.000 0.000 0.000\n" +
+								"d 1.0\n" +
 								"illum 2");
-								if (vmt.translucent==1||vmt.alphatest==1) {
+								if (vmt.translucent == 1 || vmt.alphatest == 1) {
 									materialFile.println(
-									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-									"map_Kd "+"materials/"+vmt.basetexture+".tga");
+									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
+									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								} else {
 									materialFile.println(
-									"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
-									"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+									"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
+									"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
 								}
 								if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 									materialFile.println(
-									"map_bump "+"materials/"+vmt.bumpmap+".jpg");
+									"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
 								}
 								materialFile.println();
 							}
 						}
 					} else { // Cant find material
 						int textureIndex = getTextureIndexByName(textures, el);
-						if (textureIndex == -1) // But this is a new material
-						{
+						if (textureIndex == -1) { // But this is a new material
 							printProgressBar("Missing Material: " + vmt.basetexture);
 							textures.add(new Texture(el, vmt.basetexture, "", 1, 1));
 						}
@@ -710,8 +790,9 @@ public class App {
 					String buffer = "";
 
 					if (side.dispinfo == null) {
-						if (Solid.isDisplacementSolid(solid))
+						if (Solid.isDisplacementSolid(solid)) {
 							continue;
+						}
 						for (int i = 0; i < side.points.length; i++) {
 							double u = Vector3.dot(side.points[i], side.uAxisVector) / (texture.width * side.uAxisScale)
 									+ side.uAxisTranslation / texture.width;
@@ -734,12 +815,10 @@ public class App {
 						// B C
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex+1)%4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex+3)%4].subtract(side.points[startIndex]);
-						for (int i = 0; i < side.dispinfo.normals.length - 1; i++) // all rows but last
-						{
-							for (int j = 0; j < side.dispinfo.normals[0].length - 1; j++) // all columns but last
-							{
+						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
+						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
+						for (int i = 0; i < side.dispinfo.normals.length - 1; i++) { // all rows but last
+							for (int j = 0; j < side.dispinfo.normals[0].length - 1; j++) { // all columns but last
 								buffer = "";
 								Vector3 point = side.points[startIndex]
 										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
@@ -877,7 +956,7 @@ public class App {
 
 					String[] command = new String[] {
 						CrowbarLibPath,
-						"-p", formatPath(new File(outPath).getParent()+File.separator+entity.model)};
+						"-p", formatPath(new File(outPath).getParent() + File.separator + entity.model)};
 				
 					proc = Runtime.getRuntime().exec(command);
 					// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -1119,16 +1198,16 @@ public class App {
 								}
 
 								materialFile.println("\n" + 
-								"newmtl "+el+"\n"+
-								"Ka 1.000 1.000 1.000\n"+
-								"Kd 1.000 1.000 1.000\n"+
-								"Ks 0.000 0.000 0.000\n"+
-								"d 1.0\n"+
+								"newmtl " + el + "\n" +
+								"Ka 1.000 1.000 1.000\n" +
+								"Kd 1.000 1.000 1.000\n" +
+								"Ks 0.000 0.000 0.000\n" +
+								"d 1.0\n" +
 								"illum 2");
-								if (vmt.translucent==1||vmt.alphatest==1) {
+								if (vmt.translucent == 1 || vmt.alphatest == 1) {
 									materialFile.println(
-									"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-									"map_Kd "+"materials/"+vmt.basetexture+".tga");
+									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
+									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								} else {
 									materialFile.println("map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" + "map_Kd "
 											+ "materials/" + vmt.basetexture + ".jpg");
@@ -1139,28 +1218,27 @@ public class App {
 								materialFile.println();
 							} else { // File has already been extracted
 								int textureIndex = getTextureIndexByName(textures, el);
-								if (textureIndex == -1) // But this is a new material
-								{
+								if (textureIndex == -1) { // But this is a new material
 									textureIndex = getTextureIndexByFileName(textures, vmt.basetexture);
 									// System.out.println("Adding Material: "+ el);
 									textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(),
 											textures.get(textureIndex).width, textures.get(textureIndex).height));
 
-									materialFile.println("\n"+ 
-									"newmtl "+el+"\n"+
-									"Ka 1.000 1.000 1.000\n"+
-									"Kd 1.000 1.000 1.000\n"+
-									"Ks 0.000 0.000 0.000\n"+
-									"d 1.0\n"+
+									materialFile.println("\n" + 
+									"newmtl " + el + "\n" +
+									"Ka 1.000 1.000 1.000\n" +
+									"Kd 1.000 1.000 1.000\n" +
+									"Ks 0.000 0.000 0.000\n" +
+									"d 1.0\n" +
 									"illum 2");
-									if (vmt.translucent==1||vmt.alphatest==1) {
+									if (vmt.translucent == 1 || vmt.alphatest == 1) {
 										materialFile.println(
-										"map_Ka "+"materials/"+vmt.basetexture+".tga"+"\n"+
-										"map_Kd "+"materials/"+vmt.basetexture+".tga");
+										"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
+										"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 									} else {
 										materialFile.println(
-										"map_Ka "+"materials/"+vmt.basetexture+".jpg"+"\n"+
-										"map_Kd "+"materials/"+vmt.basetexture+".jpg");
+										"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
+										"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
 									}
 									if (vmt.bumpmap != null) { // If the material has a bump map associated with it
 										materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".jpg");
@@ -1170,8 +1248,7 @@ public class App {
 							}
 						} else { // Cant find material
 							int textureIndex = getTextureIndexByName(textures, el);
-							if (textureIndex == -1) // But this is a new material
-							{
+							if (textureIndex == -1) { // But this is a new material
 								printProgressBar("Missing Material: " + vmt.basetexture);
 								textures.add(new Texture(el, vmt.basetexture, "", 1, 1));
 							}
@@ -1219,9 +1296,9 @@ public class App {
 		System.out.println("[5/5] Cleaning up...");
 
 		if (vmf.entities != null) { //There are no entities in this VMF
-			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString())); //Delete models. Everything is now in the OBJ file
+			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString())); // Delete models. Everything is now in the OBJ file
 		}
-		deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()),"vtf"); //Delete unconverted textures
+		deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf"); // Delete unconverted textures
 
 		in.close();
 		objFile.close();

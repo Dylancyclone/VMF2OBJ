@@ -4,8 +4,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import com.google.gson.Gson;
 
+import com.lathrum.VMF2OBJ.App;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class VMF {
@@ -240,7 +240,7 @@ public class VMF {
 		text = text.replaceAll(",,", ",");
 
 		// System.out.println(text);
-		VMF vmf = new Gson().fromJson(text, VMF.class);
+		VMF vmf = App.gson.fromJson(text, VMF.class);
 		return vmf;
 	}
 
@@ -248,7 +248,6 @@ public class VMF {
 		if (vmf.solids == null) {
 			return vmf;
 		} // There are no brushes in this VMF
-		Gson gson = new Gson();
 		String planeRegex = "\\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\) \\((.+?) (.+?) (.+?)\\)";
 		Pattern planePattern = Pattern.compile(planeRegex);
 		Matcher planeMatch;
@@ -307,7 +306,7 @@ public class VMF {
 			}
 
 			j = 0;
-			Solid solidProxy = gson.fromJson(gson.toJson(solid, Solid.class), Solid.class);
+			Solid solidProxy = App.gson.fromJson(App.gson.toJson(solid, Solid.class), Solid.class);
 			for (Side side : solidProxy.sides) {
 				Side newSide = Side.completeSide(side, solidProxy);
 				if (newSide != null) {

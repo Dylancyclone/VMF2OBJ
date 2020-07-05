@@ -836,12 +836,19 @@ public class App {
 					faces.clear();
 					materials.clear();
 
-					ArrayList<Integer> indicies = getEntryIndiciesByPattern(vpkEntries,
-							entity.model.substring(0, entity.model.lastIndexOf('.')) + ".");
+					// Crowbar has a setting that puts all decompiled models in a subfolder
+					// called `DecompileFolderForEachModelIsChecked`. This is false by default,
+					// but must be handled otherwise all model will fail to convert
+					Boolean crowbarSubfolderSetting = false;
+
+					String modelWithoutExtension = entity.model.substring(0, entity.model.lastIndexOf('.'));
+					entity.modelName = modelWithoutExtension.substring(modelWithoutExtension.lastIndexOf("/"));
+					ArrayList<Integer> indicies = getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".");
+
 					indicies.removeAll(
-							getEntryIndiciesByPattern(vpkEntries, entity.model.substring(0, entity.model.lastIndexOf('.')) + ".vmt"));
+							getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vmt"));
 					indicies.removeAll(
-							getEntryIndiciesByPattern(vpkEntries, entity.model.substring(0, entity.model.lastIndexOf('.')) + ".vtf"));
+							getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vtf"));
 					for (int index : indicies) {
 
 						if (index != -1) {
@@ -884,16 +891,25 @@ public class App {
 
 					String qcText = "";
 					try {
-						qcText = readFile(new File(outPath).getParent() + File.separator
-								+ entity.model.substring(0, entity.model.lastIndexOf('.')) + ".qc");	// This line may cause errors if
-																																											// the qc file does not have the
-																																											// same name as the mdl file
+						// This line may cause errors if the qc file does not have the same name as the mdl file
+						qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + ".qc");
 					} catch (IOException e) {
+						//This will be caught by detecting a blank string
 						// System.out.println("Exception Occured: " + e.toString());
 					}
 					if (qcText.matches("")) {
-						printProgressBar("Error: Could not find QC file for model, skipping: " + entity.model);
-						continue;
+						try {
+							crowbarSubfolderSetting = true;
+							// This line may cause errors if the qc file does not have the same name as the mdl file
+							qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
+						} catch (IOException e) {
+							//This will be caught by detecting a blank string
+							// System.out.println("Exception Occured: " + e.toString());
+						}
+						if (qcText.matches("")) {
+							printProgressBar("Error: Could not find QC file for model, skipping: " + entity.model);
+							continue;
+						}
 					}
 
 					QC qc = QC.parseQC(qcText);
@@ -904,6 +920,9 @@ public class App {
 						String path = "/";
 						if (qc.ModelName.contains("/")) {
 							path += qc.ModelName.substring(0, qc.ModelName.lastIndexOf('/'));
+						}
+						if (crowbarSubfolderSetting) {
+							path += File.separator + entity.modelName;
 						}
 						String smdText = readFile(formatPath(
 								new File(outPath).getParent() + File.separator + "models" + path + File.separator + bodyGroup));

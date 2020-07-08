@@ -369,6 +369,8 @@ public class App {
 		Scanner in;
 		ProgressBarBuilder pbb;
 		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
+		HashMap<String, VMT> materialCache = new HashMap<String, VMT>();
+		HashMap<String, QC> modelCache = new HashMap<String, QC>();
 		PrintWriter objFile;
 		PrintWriter materialFile;
 		String outPath = "";
@@ -490,7 +492,6 @@ public class App {
 
 		VMF vmf = VMF.parseVMF(text);
 		vmf = VMF.parseSolids(vmf);
-		// System.out.println(gson.toJson(vmf));
 
 		//
 		// Write brushes
@@ -573,37 +574,43 @@ public class App {
 				for (String el : uniqueMaterialsList) {
 					el = el.toLowerCase();
 
-					// Read File
-					String VMTText = "";
-					try {
-						int index = getEntryIndexByPath(vpkEntries, "materials/" + el + ".vmt");
-						if (index == -1) {
-							printProgressBar("Missing Material: " + el);
+					VMT vmt = materialCache.get(el); // Check if material has been processed before
+					if (vmt != null) {
+						vmt = gson.fromJson(gson.toJson(vmt, VMT.class), VMT.class); // Deep copy so the cache isn't modified
+					} else { // If it has not yet been processed, process it
+						// Read File
+						String VMTText = "";
+						try {
+							int index = getEntryIndexByPath(vpkEntries, "materials/" + el + ".vmt");
+							if (index == -1) {
+								printProgressBar("Missing Material: " + el);
+								continue;
+							}
+							VMTText = new String(vpkEntries.get(index).readData());
+						} catch (IOException e) {
+							System.out.println("Failed to read material: " + el);
+							System.err.println(e.toString());
+						}
+
+						try {
+							vmt = VMT.parseVMT(VMTText);
+						} catch (Exception ex) {
+							printProgressBar("Failed to parse Material: " + el);
 							continue;
 						}
-						VMTText = new String(vpkEntries.get(index).readData());
-					} catch (IOException e) {
-						System.out.println("Failed to read material: " + el);
-						System.err.println(e.toString());
-					}
+						vmt.name = el;
 
-					VMT vmt = new VMT();
-					try {
-						vmt = VMT.parseVMT(VMTText);
-					} catch (Exception ex) {
-						printProgressBar("Failed to parse Material: " + el);
-						continue;
+						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+							printProgressBar("Material has no texture: " + el);
+							continue;
+						}
+						if (vmt.basetexture.endsWith(".vtf")) {
+							vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
+						}
+						materialCache.put(el, vmt);
+						vmt = gson.fromJson(gson.toJson(vmt, VMT.class), VMT.class); // Deep copy so the cache isn't modified
 					}
-					vmt.name = el;
-					// System.out.println(gson.toJson(vmt));
-					// System.out.println(vmt.basetexture);
-					if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
-						printProgressBar("Material has no texture: " + el);
-						continue;
-					}
-					if (vmt.basetexture.endsWith(".vtf")) {
-						vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
-					}
+					
 					int index = getEntryIndexByPath(vpkEntries, "materials/" + vmt.basetexture + ".vtf");
 					// System.out.println(index);
 					if (index != -1) {
@@ -915,100 +922,109 @@ public class App {
 					faces.clear();
 					materials.clear();
 
-					// Crowbar has a setting that puts all decompiled models in a subfolder
-					// called `DecompileFolderForEachModelIsChecked`. This is false by default,
-					// but must be handled otherwise all model will fail to convert
-					Boolean crowbarSubfolderSetting = false;
+					QC qc = modelCache.get(entity.model); // Check if model has been processed before
+					if (qc != null) {
+						qc = gson.fromJson(gson.toJson(qc, QC.class), QC.class); // Deep copy so the cache isn't modified
+					} else { // If it has not yet been processed, process it
 
-					String modelWithoutExtension = entity.model.substring(0, entity.model.lastIndexOf('.'));
-					entity.modelName = modelWithoutExtension.substring(modelWithoutExtension.lastIndexOf("/"));
-					ArrayList<Integer> indicies = getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".");
-
-					indicies.removeAll(
-							getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vmt"));
-					indicies.removeAll(
-							getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vtf"));
-					for (int index : indicies) {
-
-						if (index != -1) {
-							File fileOutPath = new File(outPath);
-							fileOutPath = new File(
-									formatPath(fileOutPath.getParent() + File.separator + vpkEntries.get(index).getFullPath()));
-							if (!fileOutPath.exists()) {
-								try {
-									File directory = new File(fileOutPath.getParent());
-									if (!directory.exists()) {
-										directory.mkdirs();
+						// Crowbar has a setting that puts all decompiled models in a subfolder
+						// called `DecompileFolderForEachModelIsChecked`. This is false by default,
+						// but must be handled otherwise all model will fail to convert
+						Boolean crowbarSubfolderSetting = false;
+	
+						String modelWithoutExtension = entity.model.substring(0, entity.model.lastIndexOf('.'));
+						entity.modelName = modelWithoutExtension.substring(modelWithoutExtension.lastIndexOf("/"));
+						ArrayList<Integer> indicies = getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".");
+	
+						indicies.removeAll(
+								getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vmt"));
+						indicies.removeAll(
+								getEntryIndiciesByPattern(vpkEntries, modelWithoutExtension + ".vtf"));
+						for (int index : indicies) {
+	
+							if (index != -1) {
+								File fileOutPath = new File(outPath);
+								fileOutPath = new File(
+										formatPath(fileOutPath.getParent() + File.separator + vpkEntries.get(index).getFullPath()));
+								if (!fileOutPath.exists()) {
+									try {
+										File directory = new File(fileOutPath.getParent());
+										if (!directory.exists()) {
+											directory.mkdirs();
+										}
+									} catch (Exception e) {
+										System.out.println("Failed to create directory: " + fileOutPath.getParent());
+										System.err.println(e.toString());
 									}
-								} catch (Exception e) {
-									System.out.println("Failed to create directory: " + fileOutPath.getParent());
-									System.err.println(e.toString());
-								}
-								try {
-									vpkEntries.get(index).extract(fileOutPath);
-								} catch (Exception e) {
-									System.err.println("Failed to extract: " + fileOutPath);
-									System.err.println(e.toString());
+									try {
+										vpkEntries.get(index).extract(fileOutPath);
+									} catch (Exception e) {
+										System.err.println("Failed to extract: " + fileOutPath);
+										System.err.println(e.toString());
+									}
 								}
 							}
 						}
-					}
-
-					String[] command = new String[] {
-						CrowbarLibPath,
-						"-p", formatPath(new File(outPath).getParent() + File.separator + entity.model)};
-				
-					proc = Runtime.getRuntime().exec(command);
-					// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-					// String line = "";
-					// while ((line = reader.readLine()) != null) {
-					// 	System.out.println(line);
-					// }
-					BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-					while ((reader.readLine()) != null) {}
-					proc.waitFor();
-
-					String qcText = "";
-					try {
-						// This line may cause errors if the qc file does not have the same name as the mdl file
-						qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + ".qc");
-					} catch (IOException e) {
-						//This will be caught by detecting a blank string
-						// System.out.println("Exception Occured: " + e.toString());
-					}
-					if (qcText.matches("")) {
+	
+						String[] command = new String[] {
+							CrowbarLibPath,
+							"-p", formatPath(new File(outPath).getParent() + File.separator + entity.model)};
+					
+						proc = Runtime.getRuntime().exec(command);
+						// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+						// String line = "";
+						// while ((line = reader.readLine()) != null) {
+						// 	System.out.println(line);
+						// }
+						BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+						while ((reader.readLine()) != null) {}
+						proc.waitFor();
+	
+						String qcText = "";
 						try {
-							crowbarSubfolderSetting = true;
 							// This line may cause errors if the qc file does not have the same name as the mdl file
-							qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
+							qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + ".qc");
 						} catch (IOException e) {
 							//This will be caught by detecting a blank string
 							// System.out.println("Exception Occured: " + e.toString());
 						}
 						if (qcText.matches("")) {
-							printProgressBar("Error: Could not find QC file for model, skipping: " + entity.model);
-							continue;
+							try {
+								crowbarSubfolderSetting = true;
+								// This line may cause errors if the qc file does not have the same name as the mdl file
+								qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
+							} catch (IOException e) {
+								//This will be caught by detecting a blank string
+								// System.out.println("Exception Occured: " + e.toString());
+							}
+							if (qcText.matches("")) {
+								printProgressBar("Error: Could not find QC file for model, skipping: " + entity.model);
+								continue;
+							}
 						}
+	
+						qc = QC.parseQC(qcText);
+	
+						ArrayList<SMDTriangle> SMDTriangles = new ArrayList<SMDTriangle>();
+	
+						for (String bodyGroup : qc.BodyGroups) {
+							String path = "/";
+							if (qc.ModelName.contains("/")) {
+								path += qc.ModelName.substring(0, qc.ModelName.lastIndexOf('/'));
+							}
+							if (crowbarSubfolderSetting) {
+								path += File.separator + entity.modelName;
+							}
+							String smdText = readFile(formatPath(
+									new File(outPath).getParent() + File.separator + "models" + path + File.separator + bodyGroup));
+	
+							SMDTriangles.addAll(Arrays.asList(SMDTriangle.parseSMD(smdText)));
+						}
+						qc.triangles = SMDTriangles.toArray(new SMDTriangle[] {});
+						modelCache.put(entity.model, qc);
+						qc = gson.fromJson(gson.toJson(qc, QC.class), QC.class); // Deep copy so the cache isn't modified
 					}
-
-					QC qc = QC.parseQC(qcText);
-
-					ArrayList<SMDTriangle> SMDTriangles = new ArrayList<SMDTriangle>();
-
-					for (String bodyGroup : qc.BodyGroups) {
-						String path = "/";
-						if (qc.ModelName.contains("/")) {
-							path += qc.ModelName.substring(0, qc.ModelName.lastIndexOf('/'));
-						}
-						if (crowbarSubfolderSetting) {
-							path += File.separator + entity.modelName;
-						}
-						String smdText = readFile(formatPath(
-								new File(outPath).getParent() + File.separator + "models" + path + File.separator + bodyGroup));
-
-						SMDTriangles.addAll(Arrays.asList(SMDTriangle.parseSMD(smdText)));
-					}
-
+	
 					// Transform model
 					String[] angles = entity.angles.split(" ");
 					double[] radAngles = new double[3];
@@ -1019,8 +1035,8 @@ public class App {
 					String[] origin = entity.origin.split(" ");
 					Vector3 transform = new Vector3(Double.parseDouble(origin[0]), Double.parseDouble(origin[1]),
 							Double.parseDouble(origin[2]));
-					for (int i = 0; i < SMDTriangles.size(); i++) {
-						SMDTriangle temp = SMDTriangles.get(i);
+					for (int i = 0; i < qc.triangles.length; i++) {
+						SMDTriangle temp = qc.triangles[i];
 						materials.add(temp.materialName);
 						for (int j = 0; j < temp.points.length; j++) {
 							// VMF stores rotations as: YZX
@@ -1033,7 +1049,7 @@ public class App {
 							temp.points[j].position = temp.points[j].position.add(transform);
 							verticies.add(temp.points[j].position);
 						}
-						SMDTriangles.set(i, temp);
+						qc.triangles[i] = temp;
 					}
 
 					// TODO: Margin of error?
@@ -1056,48 +1072,53 @@ public class App {
 					for (String el : uniqueMaterialsList) {
 						el = el.toLowerCase();
 
-						// Read File
-						String VMTText = "";
-						for (String cdMaterial : qc.CDMaterials) { // Our material can be in multiple directories, we gotta find it
-							if (cdMaterial.endsWith("/")) {
-								cdMaterial = cdMaterial.substring(0, cdMaterial.lastIndexOf('/'));
+						VMT vmt = materialCache.get(el); // Check if material has been processed before
+						if (vmt != null) {
+							vmt = gson.fromJson(gson.toJson(vmt, VMT.class), VMT.class); // Deep copy so the cache isn't modified
+						} else { // If it has not yet been processed, process it
+							// Read File
+							String VMTText = "";
+							for (String cdMaterial : qc.CDMaterials) { // Our material can be in multiple directories, we gotta find it
+								if (cdMaterial.endsWith("/")) {
+									cdMaterial = cdMaterial.substring(0, cdMaterial.lastIndexOf('/'));
+								}
+								try {
+									int index = getEntryIndexByPath(vpkEntries, "materials/" + cdMaterial + "/" + el + ".vmt");
+									if (index == -1) {
+										continue;
+									} // Could not find it
+									VMTText = new String(vpkEntries.get(index).readData());
+								} catch (IOException e) {
+									System.out.println("Failed to read material: " + el);
+									System.err.println(e.toString());
+								}
+								if (!VMTText.isEmpty()) {
+									break;
+								}
 							}
+							if (VMTText.isEmpty()) {
+								printProgressBar("Could not find material: " + el);
+								continue;
+							}
+
 							try {
-								int index = getEntryIndexByPath(vpkEntries, "materials/" + cdMaterial + "/" + el + ".vmt");
-								if (index == -1) {
-									continue;
-								} // Could not find it
-								VMTText = new String(vpkEntries.get(index).readData());
-							} catch (IOException e) {
-								System.out.println("Failed to read material: " + el);
-								System.err.println(e.toString());
+								vmt = VMT.parseVMT(VMTText);
+							} catch (Exception ex) {
+								printProgressBar("Failed to parse Material: " + el);
+								continue;
 							}
-							if (!VMTText.isEmpty()) {
-								break;
+							vmt.name = el;
+							if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
+								printProgressBar("Material has no texture: " + el);
+								continue;
 							}
-						}
-						if (VMTText.isEmpty()) {
-							printProgressBar("Could not find material: " + el);
-							continue;
+							if (vmt.basetexture.endsWith(".vtf")) {
+								vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
+							}
+							materialCache.put(el, vmt);
+							vmt = gson.fromJson(gson.toJson(vmt, VMT.class), VMT.class); // Deep copy so the cache isn't modified
 						}
 
-						VMT vmt = new VMT();
-						try {
-							vmt = VMT.parseVMT(VMTText);
-						} catch (Exception ex) {
-							printProgressBar("Failed to parse Material: " + el);
-							continue;
-						}
-						vmt.name = el;
-						// System.out.println(gson.toJson(vmt));
-						// System.out.println(vmt.basetexture);
-						if (vmt.basetexture == null || vmt.basetexture.isEmpty()) {
-							printProgressBar("Material has no texture: " + el);
-							continue;
-						}
-						if (vmt.basetexture.endsWith(".vtf")) {
-							vmt.basetexture = vmt.basetexture.substring(0, vmt.basetexture.lastIndexOf('.')); // snip the extension
-						}
 						int index = getEntryIndexByPath(vpkEntries, "materials/" + vmt.basetexture + ".vtf");
 						// System.out.println(index);
 						if (index != -1) {
@@ -1256,7 +1277,7 @@ public class App {
 					}
 					objFile.println();
 
-					for (SMDTriangle SMDTriangle : SMDTriangles) {
+					for (SMDTriangle SMDTriangle : qc.triangles) {
 						String buffer = "";
 
 						for (int i = 0; i < SMDTriangle.points.length; i++) {

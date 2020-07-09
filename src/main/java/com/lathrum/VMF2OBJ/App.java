@@ -31,6 +31,7 @@ public class App {
 	public static String CrowbarLibPath;
 	public static boolean quietMode = false;
 	public static boolean ignoreTools = false;
+	public static String appVersion;
 
 	/**
 	 * Extract Libraries to temporary directory.
@@ -366,6 +367,11 @@ public class App {
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
 
+		// Load app version
+		final Properties properties = new Properties();
+		properties.load(App.class.getClassLoader().getResourceAsStream("project.properties"));
+		appVersion = properties.getProperty("version");
+
 		Scanner in;
 		ProgressBarBuilder pbb;
 		ArrayList<Entry> vpkEntries = new ArrayList<Entry>();
@@ -434,6 +440,8 @@ public class App {
 			System.err.println("Failed to extract tools, do you have permissions?");
 			System.err.println(e.toString());
 		}
+
+		System.out.println("Starting VMF2OBJ conversion v" + appVersion);
 
 		//
 		// Read VPK
@@ -507,7 +515,8 @@ public class App {
 		int vertexNormalOffset = 1;
 		System.out.println("[3/5] Writing brushes...");
 
-		objFile.println("# Decompiled with VMF2OBJ by Dylancyclone\n");
+		objFile.println("# Decompiled with VMF2OBJ v" + appVersion + " by Dylancyclone\n");
+		materialFile.println("# Decompiled with VMF2OBJ v" + appVersion + " by Dylancyclone\n");
 		objFile.println("mtllib "
 				+ matLibName.substring(formatPath(matLibName).lastIndexOf(File.separatorChar) + 1, matLibName.length()));
 

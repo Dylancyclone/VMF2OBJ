@@ -9,4 +9,6 @@ public class Entity {
 
 	public String model;
 	public String skin;
+	
+	public String modelName;
 }

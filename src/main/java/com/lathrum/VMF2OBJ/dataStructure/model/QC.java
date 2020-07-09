@@ -12,6 +12,8 @@ public class QC {
 
 	public String[] CDMaterials;
 
+	public SMDTriangle[] triangles;
+
 	// public String TextureGroup; //oof
 
 	public QC(String ModelName, String[] BodyGroups, String[] CDMaterials) {

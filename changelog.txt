@@ -1,3 +1,9 @@
+7/08/2020 1.1.2:
+* Massively improve conversion speed (up to 670% on large maps)
+* Fix Crowbar `DecompileFolderForEachModelIsChecked` setting causing issues
+* Improved exception reporting
+* The app will now print the version number at the beginning of the conversion process and at the top of generated files
+
 6/29/2020 1.1.1:
 * Fix displacements
 * Fix some models' QC being unfindable

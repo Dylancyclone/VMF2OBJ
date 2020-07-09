@@ -6,7 +6,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import com.google.gson.Gson;
+
+import com.lathrum.VMF2OBJ.App;
 import com.lathrum.VMF2OBJ.dataStructure.Plane;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
@@ -31,7 +32,6 @@ public class Side {
 	public Displacement dispinfo;
 
 	public static Side completeSide(Side side, Solid solid) {
-		Gson gson = new Gson();
 		Collection<Vector3> intersections = new LinkedList<Vector3>();
 
 		for (Side side2 : solid.sides) {
@@ -91,7 +91,7 @@ public class Side {
 			}
 		});
 
-		Side newSide = gson.fromJson(gson.toJson(side, Side.class), Side.class);
+		Side newSide = App.gson.fromJson(App.gson.toJson(side, Side.class), Side.class);
 
 		newSide.points = IntersectionsList.toArray(new Vector3[IntersectionsList.size()]);
 

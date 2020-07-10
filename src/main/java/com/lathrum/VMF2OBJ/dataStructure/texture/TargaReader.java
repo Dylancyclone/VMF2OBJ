@@ -5,7 +5,7 @@ import java.io.*;
 import java.io.IOException;
 
 // http://paulbourke.net/dataformats/tga/
-// I did not write this
+// I did not write any of this except for getWidth() and getHeight()
 public class TargaReader {
 	public static BufferedImage getImage(String fileName) throws IOException {
 		File f = new File(fileName);
@@ -17,6 +17,14 @@ public class TargaReader {
 	}
 
 	private static int offset;
+
+	public static int getWidth(byte[] buf) {
+		return btoi(buf[12]) + (btoi(buf[13]) << 8);
+	}
+
+	public static int getHeight(byte[] buf) {
+		return btoi(buf[14]) + (btoi(buf[15]) << 8);
+	}
 
 	private static int btoi(byte b) {
 		int a = b;

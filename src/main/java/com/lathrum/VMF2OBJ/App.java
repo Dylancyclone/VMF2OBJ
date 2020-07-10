@@ -642,35 +642,27 @@ public class App {
 									VTFLibPath,
 									"-folder", formatPath(materialOutPath.toString()),
 									"-output", formatPath(materialOutPath.getParent()),
-									"-exportformat", "jpg"};
-								
+									"-exportformat", "tga",
+									"-format", "BGR888"};
+
 								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									command[6] = "tga"; // If the texture is translucent, use the targa format
+									command[8] = "BGRA8888"; // Only include alpha channel if it's a transparent texture
 								}
 
 								proc = Runtime.getRuntime().exec(command);
+								BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+								while ((reader.readLine()) != null) {}
 								proc.waitFor();
 								// materialOutPath.delete();
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialOutPath = new File(
-											materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
-								} else {
-									materialOutPath = new File(
-											materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".jpg");
-								}
+								materialOutPath = new File(
+									materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
 
 								int width = 1;
 								int height = 1;
-								BufferedImage bimg;
 								try {
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-										bimg = TargaReader.decode(fileContent);
-									} else {
-										bimg = ImageIO.read(materialOutPath);
-									}
-									width = bimg.getWidth();
-									height = bimg.getHeight();
+									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+									width = TargaReader.getWidth(fileContent); 
+									height = TargaReader.getHeight(fileContent);
 								} catch (Exception e) {
 									System.out.println("Cant read Material: " + materialOutPath);
 									// System.out.println(e);
@@ -709,8 +701,11 @@ public class App {
 												VTFLibPath,
 												"-folder", formatPath(bumpMapOutPath.toString()),
 												"-output", formatPath(bumpMapOutPath.getParent()),
-												"-exportformat", "jpg"};
+												"-exportformat", "tga",
+												"-format", "BGR888"};
 											proc = Runtime.getRuntime().exec(command);
+											BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+											while ((reader.readLine()) != null) {}
 											proc.waitFor();
 										} catch (Exception e) {
 											System.err.println("Failed to extract bump material: " + vmt.bumpmap);
@@ -725,20 +720,16 @@ public class App {
 							"Ka 1.000 1.000 1.000\n" +
 							"Kd 1.000 1.000 1.000\n" +
 							"Ks 0.000 0.000 0.000\n" +
-							"d 1.0\n" +
-							"illum 2");
-							if (vmt.translucent == 1 || vmt.alphatest == 1) {
-								materialFile.println(
-								"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-							} else {
-								materialFile.println(
-								"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-								"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-							}
+							"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+							"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 								materialFile.println(
-								"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+								"map_bump " + "materials/" + vmt.bumpmap + ".tga");
+							}
+							if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+								materialFile.println(
+								// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+								"illum 4");
 							}
 							materialFile.println();
 						} else { // File has already been extracted
@@ -754,20 +745,16 @@ public class App {
 								"Ka 1.000 1.000 1.000\n" +
 								"Kd 1.000 1.000 1.000\n" +
 								"Ks 0.000 0.000 0.000\n" +
-								"d 1.0\n" +
-								"illum 2");
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-								} else {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-								}
+								"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 									materialFile.println(
-									"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+									"map_bump " + "materials/" + vmt.bumpmap + ".tga");
+								}
+								if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+									materialFile.println(
+									// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+									"illum 4");
 								}
 								materialFile.println();
 							}
@@ -1149,35 +1136,27 @@ public class App {
 										VTFLibPath,
 										"-folder", formatPath(materialOutPath.toString()),
 										"-output", formatPath(materialOutPath.getParent()),
-										"-exportformat", "jpg"};
-
+										"-exportformat", "tga",
+										"-format", "BGR888"};
+	
 									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										convertCommand[6] = "tga"; // If the texture is translucent, use the targa format
+										convertCommand[8] = "BGRA8888"; // Only include alpha channel if it's a transparent texture
 									}
 
 									proc = Runtime.getRuntime().exec(convertCommand);
+									BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+									while ((reader.readLine()) != null) {}
 									proc.waitFor();
 									// materialOutPath.delete();
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										materialOutPath = new File(
-												materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
-									} else {
-										materialOutPath = new File(
-												materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".jpg");
-									}
+									materialOutPath = new File(
+										materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
 
 									int width = 1;
 									int height = 1;
-									BufferedImage bimg;
 									try {
-										if (vmt.translucent == 1 || vmt.alphatest == 1) {
-											byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-											bimg = TargaReader.decode(fileContent);
-										} else {
-											bimg = ImageIO.read(materialOutPath);
-										}
-										width = bimg.getWidth();
-										height = bimg.getHeight();
+										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+										width = TargaReader.getWidth(fileContent); 
+										height = TargaReader.getHeight(fileContent);
 									} catch (Exception e) {
 										System.out.println("Cant read Material: " + materialOutPath);
 										// System.out.println(e);
@@ -1216,8 +1195,11 @@ public class App {
 													VTFLibPath,
 													"-folder", formatPath(bumpMapOutPath.toString()),
 													"-output", formatPath(bumpMapOutPath.getParent()),
-													"-exportformat", "jpg"};
+													"-exportformat", "tga",
+													"-format", "BGR888"};
 												proc = Runtime.getRuntime().exec(convertCommand);
+												BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+												while ((reader.readLine()) != null) {}
 												proc.waitFor();
 											} catch (Exception e) {
 												System.err.println("Failed to extract bump material: " + vmt.bumpmap);
@@ -1232,18 +1214,15 @@ public class App {
 								"Ka 1.000 1.000 1.000\n" +
 								"Kd 1.000 1.000 1.000\n" +
 								"Ks 0.000 0.000 0.000\n" +
-								"d 1.0\n" +
-								"illum 2");
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-								} else {
-									materialFile.println("map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" + "map_Kd "
-											+ "materials/" + vmt.basetexture + ".jpg");
-								}
+								"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								if (vmt.bumpmap != null) { // If the material has a bump map associated with it
-									materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+									materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".tga");
+								}
+								if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+									materialFile.println(
+									// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+									"illum 4");
 								}
 								materialFile.println();
 							} else { // File has already been extracted
@@ -1259,19 +1238,15 @@ public class App {
 									"Ka 1.000 1.000 1.000\n" +
 									"Kd 1.000 1.000 1.000\n" +
 									"Ks 0.000 0.000 0.000\n" +
-									"d 1.0\n" +
-									"illum 2");
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										materialFile.println(
-										"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-										"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-									} else {
-										materialFile.println(
-										"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-										"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-									}
+									"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 									if (vmt.bumpmap != null) { // If the material has a bump map associated with it
-										materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+										materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".tga");
+									}
+									if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+										materialFile.println(
+										// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+										"illum 4");
 									}
 									materialFile.println();
 								}

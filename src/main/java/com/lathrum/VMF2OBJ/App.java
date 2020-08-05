@@ -346,7 +346,7 @@ public class App {
 	 * @throws Exception Unhandled exception
 	 */
 	public static void main(String[] args) throws Exception {
-		// The General outline of the program is a follows:
+		// The General outline of the program is as follows:
 
 		// Read Geometry
 		// Collapse Vertices
@@ -382,6 +382,7 @@ public class App {
 		String outPath = "";
 		String objName = "";
 		String matLibName = "";
+		final File tempDir;
 
 		// Prepare Arguments
 		try {
@@ -427,15 +428,23 @@ public class App {
 
 		// Clean working directory
 		try {
-			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf");
-			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString()));
-		} catch (Exception e) {
-			// System.err.println("Exception: "+e);
-		}
+			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf"); // Delete unconverted textures
+		} catch (Exception ignored) {}
+
+		tempDir = new File(System.getProperty("java.io.tmpdir") + File.separator + "vmf2objtemp");
+		tempDir.mkdirs();
+		// When the program shuts down, delete temporary directory
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        try {
+					deleteRecursive(tempDir);
+				} catch (Exception ignored) { ignored.printStackTrace();}
+      }
+    });
 
 		// Extract Libraries
 		try {
-			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
+			extractLibraries(tempDir.getAbsolutePath());
 		} catch (Exception e) {
 			System.err.println("Failed to extract tools, do you have permissions?");
 			System.err.println(e.toString());
@@ -925,7 +934,7 @@ public class App {
 
 						// Crowbar has a setting that puts all decompiled models in a subfolder
 						// called `DecompileFolderForEachModelIsChecked`. This is false by default,
-						// but must be handled otherwise all model will fail to convert
+						// but must be handled otherwise all models will fail to convert
 						Boolean crowbarSubfolderSetting = false;
 	
 						String modelWithoutExtension = entity.model.substring(0, entity.model.lastIndexOf('.'));
@@ -939,9 +948,9 @@ public class App {
 						for (int index : indicies) {
 	
 							if (index != -1) {
-								File fileOutPath = new File(outPath);
+								File fileOutPath = tempDir;
 								fileOutPath = new File(
-										formatPath(fileOutPath.getParent() + File.separator + vpkEntries.get(index).getFullPath()));
+										formatPath(fileOutPath + File.separator + vpkEntries.get(index).getFullPath()));
 								if (!fileOutPath.exists()) {
 									try {
 										File directory = new File(fileOutPath.getParent());
@@ -964,7 +973,7 @@ public class App {
 	
 						String[] command = new String[] {
 							CrowbarLibPath,
-							"-p", formatPath(new File(outPath).getParent() + File.separator + entity.model)};
+							"-p", formatPath(tempDir + File.separator + entity.model)};
 					
 						proc = Runtime.getRuntime().exec(command);
 						// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -979,7 +988,7 @@ public class App {
 						String qcText = "";
 						try {
 							// This line may cause errors if the qc file does not have the same name as the mdl file
-							qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + ".qc");
+							qcText = readFile(tempDir + File.separator + modelWithoutExtension + ".qc");
 						} catch (IOException e) {
 							//This will be caught by detecting a blank string
 							// System.out.println("Exception Occured: " + e.toString());
@@ -988,7 +997,7 @@ public class App {
 							try {
 								crowbarSubfolderSetting = true;
 								// This line may cause errors if the qc file does not have the same name as the mdl file
-								qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
+								qcText = readFile(tempDir + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
 							} catch (IOException e) {
 								//This will be caught by detecting a blank string
 								// System.out.println("Exception Occured: " + e.toString());
@@ -1012,7 +1021,7 @@ public class App {
 								path += File.separator + entity.modelName;
 							}
 							String smdText = readFile(formatPath(
-									new File(outPath).getParent() + File.separator + "models" + path + File.separator + bodyGroup));
+									tempDir + File.separator + "models" + path + File.separator + bodyGroup));
 	
 							SMDTriangles.addAll(Arrays.asList(SMDTriangle.parseSMD(smdText)));
 						}

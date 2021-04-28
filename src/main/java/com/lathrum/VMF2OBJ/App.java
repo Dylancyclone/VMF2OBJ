@@ -346,7 +346,7 @@ public class App {
 	 * @throws Exception Unhandled exception
 	 */
 	public static void main(String[] args) throws Exception {
-		// The General outline of the program is a follows:
+		// The General outline of the program is as follows:
 
 		// Read Geometry
 		// Collapse Vertices
@@ -382,6 +382,7 @@ public class App {
 		String outPath = "";
 		String objName = "";
 		String matLibName = "";
+		final File tempDir;
 
 		// Prepare Arguments
 		try {
@@ -427,15 +428,23 @@ public class App {
 
 		// Clean working directory
 		try {
-			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf");
-			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString()));
-		} catch (Exception e) {
-			// System.err.println("Exception: "+e);
-		}
+			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf"); // Delete unconverted textures
+		} catch (Exception ignored) {}
+
+		tempDir = new File(System.getProperty("java.io.tmpdir") + File.separator + "vmf2objtemp");
+		tempDir.mkdirs();
+		// When the program shuts down, delete temporary directory
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        try {
+					deleteRecursive(tempDir);
+				} catch (Exception ignored) { ignored.printStackTrace();}
+      }
+    });
 
 		// Extract Libraries
 		try {
-			extractLibraries(Paths.get(outPath).getParent().resolve("temp").toString());
+			extractLibraries(tempDir.getAbsolutePath());
 		} catch (Exception e) {
 			System.err.println("Failed to extract tools, do you have permissions?");
 			System.err.println(e.toString());
@@ -642,35 +651,27 @@ public class App {
 									VTFLibPath,
 									"-folder", formatPath(materialOutPath.toString()),
 									"-output", formatPath(materialOutPath.getParent()),
-									"-exportformat", "jpg"};
-								
+									"-exportformat", "tga",
+									"-format", "BGR888"};
+
 								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									command[6] = "tga"; // If the texture is translucent, use the targa format
+									command[8] = "BGRA8888"; // Only include alpha channel if it's a transparent texture
 								}
 
 								proc = Runtime.getRuntime().exec(command);
+								BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+								while ((reader.readLine()) != null) {}
 								proc.waitFor();
 								// materialOutPath.delete();
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialOutPath = new File(
-											materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
-								} else {
-									materialOutPath = new File(
-											materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".jpg");
-								}
+								materialOutPath = new File(
+									materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
 
 								int width = 1;
 								int height = 1;
-								BufferedImage bimg;
 								try {
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-										bimg = TargaReader.decode(fileContent);
-									} else {
-										bimg = ImageIO.read(materialOutPath);
-									}
-									width = bimg.getWidth();
-									height = bimg.getHeight();
+									byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+									width = TargaReader.getWidth(fileContent); 
+									height = TargaReader.getHeight(fileContent);
 								} catch (Exception e) {
 									System.out.println("Cant read Material: " + materialOutPath);
 									// System.out.println(e);
@@ -709,8 +710,11 @@ public class App {
 												VTFLibPath,
 												"-folder", formatPath(bumpMapOutPath.toString()),
 												"-output", formatPath(bumpMapOutPath.getParent()),
-												"-exportformat", "jpg"};
+												"-exportformat", "tga",
+												"-format", "BGR888"};
 											proc = Runtime.getRuntime().exec(command);
+											BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+											while ((reader.readLine()) != null) {}
 											proc.waitFor();
 										} catch (Exception e) {
 											System.err.println("Failed to extract bump material: " + vmt.bumpmap);
@@ -725,20 +729,16 @@ public class App {
 							"Ka 1.000 1.000 1.000\n" +
 							"Kd 1.000 1.000 1.000\n" +
 							"Ks 0.000 0.000 0.000\n" +
-							"d 1.0\n" +
-							"illum 2");
-							if (vmt.translucent == 1 || vmt.alphatest == 1) {
-								materialFile.println(
-								"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-							} else {
-								materialFile.println(
-								"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-								"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-							}
+							"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+							"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 							if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 								materialFile.println(
-								"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+								"map_bump " + "materials/" + vmt.bumpmap + ".tga");
+							}
+							if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+								materialFile.println(
+								// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+								"illum 4");
 							}
 							materialFile.println();
 						} else { // File has already been extracted
@@ -754,20 +754,16 @@ public class App {
 								"Ka 1.000 1.000 1.000\n" +
 								"Kd 1.000 1.000 1.000\n" +
 								"Ks 0.000 0.000 0.000\n" +
-								"d 1.0\n" +
-								"illum 2");
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-								} else {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-								}
+								"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								if (vmt.bumpmap != null) { //If the material has a bump map associated with it
 									materialFile.println(
-									"map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+									"map_bump " + "materials/" + vmt.bumpmap + ".tga");
+								}
+								if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+									materialFile.println(
+									// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+									"illum 4");
 								}
 								materialFile.println();
 							}
@@ -938,7 +934,7 @@ public class App {
 
 						// Crowbar has a setting that puts all decompiled models in a subfolder
 						// called `DecompileFolderForEachModelIsChecked`. This is false by default,
-						// but must be handled otherwise all model will fail to convert
+						// but must be handled otherwise all models will fail to convert
 						Boolean crowbarSubfolderSetting = false;
 	
 						String modelWithoutExtension = entity.model.substring(0, entity.model.lastIndexOf('.'));
@@ -952,9 +948,9 @@ public class App {
 						for (int index : indicies) {
 	
 							if (index != -1) {
-								File fileOutPath = new File(outPath);
+								File fileOutPath = tempDir;
 								fileOutPath = new File(
-										formatPath(fileOutPath.getParent() + File.separator + vpkEntries.get(index).getFullPath()));
+										formatPath(fileOutPath + File.separator + vpkEntries.get(index).getFullPath()));
 								if (!fileOutPath.exists()) {
 									try {
 										File directory = new File(fileOutPath.getParent());
@@ -977,7 +973,7 @@ public class App {
 	
 						String[] command = new String[] {
 							CrowbarLibPath,
-							"-p", formatPath(new File(outPath).getParent() + File.separator + entity.model)};
+							"-p", formatPath(tempDir + File.separator + entity.model)};
 					
 						proc = Runtime.getRuntime().exec(command);
 						// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -992,7 +988,7 @@ public class App {
 						String qcText = "";
 						try {
 							// This line may cause errors if the qc file does not have the same name as the mdl file
-							qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + ".qc");
+							qcText = readFile(tempDir + File.separator + modelWithoutExtension + ".qc");
 						} catch (IOException e) {
 							//This will be caught by detecting a blank string
 							// System.out.println("Exception Occured: " + e.toString());
@@ -1001,7 +997,7 @@ public class App {
 							try {
 								crowbarSubfolderSetting = true;
 								// This line may cause errors if the qc file does not have the same name as the mdl file
-								qcText = readFile(new File(outPath).getParent() + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
+								qcText = readFile(tempDir + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
 							} catch (IOException e) {
 								//This will be caught by detecting a blank string
 								// System.out.println("Exception Occured: " + e.toString());
@@ -1025,7 +1021,7 @@ public class App {
 								path += File.separator + entity.modelName;
 							}
 							String smdText = readFile(formatPath(
-									new File(outPath).getParent() + File.separator + "models" + path + File.separator + bodyGroup));
+									tempDir + File.separator + "models" + path + File.separator + bodyGroup));
 	
 							SMDTriangles.addAll(Arrays.asList(SMDTriangle.parseSMD(smdText)));
 						}
@@ -1149,35 +1145,27 @@ public class App {
 										VTFLibPath,
 										"-folder", formatPath(materialOutPath.toString()),
 										"-output", formatPath(materialOutPath.getParent()),
-										"-exportformat", "jpg"};
-
+										"-exportformat", "tga",
+										"-format", "BGR888"};
+	
 									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										convertCommand[6] = "tga"; // If the texture is translucent, use the targa format
+										convertCommand[8] = "BGRA8888"; // Only include alpha channel if it's a transparent texture
 									}
 
 									proc = Runtime.getRuntime().exec(convertCommand);
+									BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+									while ((reader.readLine()) != null) {}
 									proc.waitFor();
 									// materialOutPath.delete();
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										materialOutPath = new File(
-												materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
-									} else {
-										materialOutPath = new File(
-												materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".jpg");
-									}
+									materialOutPath = new File(
+										materialOutPath.toString().substring(0, materialOutPath.toString().lastIndexOf('.')) + ".tga");
 
 									int width = 1;
 									int height = 1;
-									BufferedImage bimg;
 									try {
-										if (vmt.translucent == 1 || vmt.alphatest == 1) {
-											byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
-											bimg = TargaReader.decode(fileContent);
-										} else {
-											bimg = ImageIO.read(materialOutPath);
-										}
-										width = bimg.getWidth();
-										height = bimg.getHeight();
+										byte[] fileContent = Files.readAllBytes(materialOutPath.toPath());
+										width = TargaReader.getWidth(fileContent); 
+										height = TargaReader.getHeight(fileContent);
 									} catch (Exception e) {
 										System.out.println("Cant read Material: " + materialOutPath);
 										// System.out.println(e);
@@ -1216,8 +1204,11 @@ public class App {
 													VTFLibPath,
 													"-folder", formatPath(bumpMapOutPath.toString()),
 													"-output", formatPath(bumpMapOutPath.getParent()),
-													"-exportformat", "jpg"};
+													"-exportformat", "tga",
+													"-format", "BGR888"};
 												proc = Runtime.getRuntime().exec(convertCommand);
+												BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+												while ((reader.readLine()) != null) {}
 												proc.waitFor();
 											} catch (Exception e) {
 												System.err.println("Failed to extract bump material: " + vmt.bumpmap);
@@ -1232,18 +1223,15 @@ public class App {
 								"Ka 1.000 1.000 1.000\n" +
 								"Kd 1.000 1.000 1.000\n" +
 								"Ks 0.000 0.000 0.000\n" +
-								"d 1.0\n" +
-								"illum 2");
-								if (vmt.translucent == 1 || vmt.alphatest == 1) {
-									materialFile.println(
-									"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-								} else {
-									materialFile.println("map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" + "map_Kd "
-											+ "materials/" + vmt.basetexture + ".jpg");
-								}
+								"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+								"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 								if (vmt.bumpmap != null) { // If the material has a bump map associated with it
-									materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+									materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".tga");
+								}
+								if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+									materialFile.println(
+									// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+									"illum 4");
 								}
 								materialFile.println();
 							} else { // File has already been extracted
@@ -1259,19 +1247,15 @@ public class App {
 									"Ka 1.000 1.000 1.000\n" +
 									"Kd 1.000 1.000 1.000\n" +
 									"Ks 0.000 0.000 0.000\n" +
-									"d 1.0\n" +
-									"illum 2");
-									if (vmt.translucent == 1 || vmt.alphatest == 1) {
-										materialFile.println(
-										"map_Ka " + "materials/" + vmt.basetexture + ".tga" + "\n" +
-										"map_Kd " + "materials/" + vmt.basetexture + ".tga");
-									} else {
-										materialFile.println(
-										"map_Ka " + "materials/" + vmt.basetexture + ".jpg" + "\n" +
-										"map_Kd " + "materials/" + vmt.basetexture + ".jpg");
-									}
+									"map_Ka " + "materials/" + vmt.basetexture + ".tga\n" +
+									"map_Kd " + "materials/" + vmt.basetexture + ".tga");
 									if (vmt.bumpmap != null) { // If the material has a bump map associated with it
-										materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".jpg");
+										materialFile.println("map_bump " + "materials/" + vmt.bumpmap + ".tga");
+									}
+									if (vmt.translucent == 1 || vmt.alphatest == 1) { // If the material has transparency
+										materialFile.println(
+										// "map_d -imfchan m" + "materials/" + vmt.basetexture + ".tga\n" + // Many programs fail to import the alpha channel of the tga file and instead import the color channel
+										"illum 4");
 									}
 									materialFile.println();
 								}

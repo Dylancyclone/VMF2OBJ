@@ -32,7 +32,7 @@ public class QC {
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\$staticprop", ""); // Remove all weirdos
+		text = text.replaceAll("\\$[^\" \\t]+\\n", ""); // Remove all keyless values
 		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
 		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
 		text = text.replaceAll("\\$", ""); // Remove all key prefixes

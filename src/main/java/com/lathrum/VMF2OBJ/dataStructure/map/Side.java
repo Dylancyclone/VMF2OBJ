@@ -7,7 +7,7 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.lathrum.VMF2OBJ.App;
+import com.lathrum.VMF2OBJ.VMF2OBJ;
 import com.lathrum.VMF2OBJ.dataStructure.Plane;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
@@ -91,7 +91,7 @@ public class Side {
 			}
 		});
 
-		Side newSide = App.gson.fromJson(App.gson.toJson(side, Side.class), Side.class);
+		Side newSide = VMF2OBJ.gson.fromJson(VMF2OBJ.gson.toJson(side, Side.class), Side.class);
 
 		newSide.points = IntersectionsList.toArray(new Vector3[IntersectionsList.size()]);
 

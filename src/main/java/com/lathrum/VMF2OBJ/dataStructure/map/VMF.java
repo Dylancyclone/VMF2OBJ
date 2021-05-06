@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.lathrum.VMF2OBJ.App;
+import com.lathrum.VMF2OBJ.VMF2OBJ;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class VMF {
@@ -240,7 +240,7 @@ public class VMF {
 		text = text.replaceAll(",,", ",");
 
 		// System.out.println(text);
-		VMF vmf = App.gson.fromJson(text, VMF.class);
+		VMF vmf = VMF2OBJ.gson.fromJson(text, VMF.class);
 		return vmf;
 	}
 
@@ -306,7 +306,7 @@ public class VMF {
 			}
 
 			j = 0;
-			Solid solidProxy = App.gson.fromJson(App.gson.toJson(solid, Solid.class), Solid.class);
+			Solid solidProxy = VMF2OBJ.gson.fromJson(VMF2OBJ.gson.toJson(solid, Solid.class), Solid.class);
 			for (Side side : solidProxy.sides) {
 				Side newSide = Side.completeSide(side, solidProxy);
 				if (newSide != null) {

@@ -1,21 +1,20 @@
 package com.lathrum.VMF2OBJ;
 
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.*;
-import javax.imageio.ImageIO;
 import com.google.gson.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.awt.image.BufferedImage;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
-import org.apache.commons.cli.*;
 
 import com.lathrum.VMF2OBJ.fileStructure.*;
 import com.lathrum.VMF2OBJ.dataStructure.*;
@@ -23,10 +22,11 @@ import com.lathrum.VMF2OBJ.dataStructure.map.*;
 import com.lathrum.VMF2OBJ.dataStructure.model.*;
 import com.lathrum.VMF2OBJ.dataStructure.texture.*;
 
-public class App {
+public class VMF2OBJ {
 
 	public static Gson gson = new Gson();
 	public static Process proc;
+	public static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 	public static String VTFLibPath;
 	public static String CrowbarLibPath;
 	public static boolean quietMode = false;
@@ -60,7 +60,7 @@ public class App {
 		URI fileURI;
 
 		try {
-			uri = App.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+			uri = VMF2OBJ.class.getProtectionDomain().getCodeSource().getLocation().toURI();
 		} catch (Exception e) {
 			System.err.println("Failed to get executable's location, do you have permissions?");
 			System.err.println(e.toString());
@@ -342,10 +342,10 @@ public class App {
 
 	/**
 	 * Convert Source .vmf files to generic .obj
-	 * @param args Launch options for the program. Read the first couple lines of main to see valid inputs
+	 * @param job Job object that represents the configuration for the conversion
 	 * @throws Exception Unhandled exception
 	 */
-	public static void main(String[] args) throws Exception {
+	public static void main(Job job) throws Exception {
 		// The General outline of the program is as follows:
 
 		// Read Geometry
@@ -359,17 +359,10 @@ public class App {
 		// Write Models
 		// Write Materials
 		// Clean Up
-		
-		CommandLineParser parser = new DefaultParser();
-		Options options = new Options();
-		options.addOption("h", "help", false, "Show this message");
-		options.addOption("e", "externalPath", true, "Semi-colon separated list of folders for external custom content (such as materials or models)");
-		options.addOption("q", "quiet", false, "Suppress warnings");
-		options.addOption("t", "tools", false, "Ignore tool brushes");
 
 		// Load app version
 		final Properties properties = new Properties();
-		properties.load(App.class.getClassLoader().getResourceAsStream("project.properties"));
+		properties.load(VMF2OBJ.class.getClassLoader().getResourceAsStream("project.properties"));
 		appVersion = properties.getProperty("version");
 
 		Scanner in;
@@ -379,58 +372,17 @@ public class App {
 		HashMap<String, QC> modelCache = new HashMap<String, QC>();
 		PrintWriter objFile;
 		PrintWriter materialFile;
-		String outPath = "";
-		String objName = "";
-		String matLibName = "";
+		String outPath = job.file.outPath;
+		String objName = job.file.objFile.toString();
+		String matLibName = job.file.mtlFile.toString();
+		quietMode = job.SuppressWarnings;
+		ignoreTools = job.skipTools;
 		final File tempDir;
-
-		// Prepare Arguments
-		try {
-			outPath = args[1];
-			objName = outPath + ".obj";
-			matLibName = outPath + ".mtl";
-
-			// parse the command line arguments
-			CommandLine cmd = parser.parse(options, args);
-			if (cmd.hasOption("h") || args[0].charAt(0) == '-' || args[1].charAt(0) == '-' || args[2].charAt(0) == '-') {
-				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-				System.exit(0);
-			}
-			if (cmd.hasOption("e")) {
-				String[] externalFolders = cmd.getOptionValue("e").split(";");
-				for (String path : externalFolders) {
-					vpkEntries.addAll(addExtraFiles(path, new File(path)));
-				}
-			}
-			if (cmd.hasOption("q")) {
-				quietMode = true;
-			}
-			if (cmd.hasOption("t")) {
-				ignoreTools = true;
-			}
-		} catch (ParseException e) {
-			System.err.println(e.getMessage());
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-			System.exit(0);
-		} catch (Exception e) {
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-			System.exit(0);
-		}
-
-		// Check for valid arguments
-		if (Paths.get(outPath).getParent() == null) {
-			System.err.println("Invalid output file. Make sure it's either an absolute or relative path");
-			System.exit(0);
-		}
 
 		// Clean working directory
 		try {
 			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf"); // Delete unconverted textures
 		} catch (Exception ignored) {}
-
 		tempDir = new File(System.getProperty("java.io.tmpdir") + File.separator + "vmf2objtemp");
 		tempDir.mkdirs();
 		// When the program shuts down, delete temporary directory
@@ -456,23 +408,24 @@ public class App {
 		// Read VPK
 		//
 
-		// Open vpk file
-		System.out.println("[1/5] Reading VPK file(s)...");
-		String[] vpkFiles = args[2].split(";");
-		for (String path : vpkFiles) {
+		// Load resources
+		System.out.println("[1/5] Reading VPK file(s) and custom content...");
+		for (Path path : job.resourcePaths) {
+			if (Files.isDirectory(path)) {
+				vpkEntries.addAll(addExtraFiles(path.toString(), path.toFile()));
+			} else {
+				VPK vpk = new VPK(path.toFile());
+				try {
+					vpk.load();
+				} catch (Exception e) {
+					System.err.println("Error while loading vpk file: " + e.getMessage());
+					return;
+				}
 
-			File vpkFile = new File(path);
-			VPK vpk = new VPK(vpkFile);
-			try {
-				vpk.load();
-			} catch (Exception e) {
-				System.err.println("Error while loading vpk file: " + e.getMessage());
-				return;
-			}
-
-			for (Directory directory : vpk.getDirectories()) {
-				for (Entry entry : directory.getEntries()) {
-					vpkEntries.add(entry);
+				for (Directory directory : vpk.getDirectories()) {
+					for (Entry entry : directory.getEntries()) {
+						vpkEntries.add(entry);
+					}
 				}
 			}
 		}
@@ -480,9 +433,9 @@ public class App {
 		// Read input file
 		String text = "";
 		try {
-			text = readFile(args[0]);
+			text = readFile(job.file.vmfFile.toString());
 		} catch (IOException e) {
-			System.err.println("Failed to read file: " + args[0] + ", does file exist?");
+			System.err.println("Failed to read file: " + job.file.vmfFile + ", does file exist?");
 			System.err.println(e.toString());
 		}
 		// System.out.println(text);
@@ -493,7 +446,7 @@ public class App {
 				directory.mkdirs();
 			}
 
-			in = new Scanner(new File(args[0]));
+			in = new Scanner(job.file.vmfFile);
 			objFile = new PrintWriter(new FileOutputStream(objName));
 			materialFile = new PrintWriter(new FileOutputStream(matLibName));
 		} catch (IOException e) {

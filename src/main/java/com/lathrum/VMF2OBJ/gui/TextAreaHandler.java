@@ -25,9 +25,14 @@ public class TextAreaHandler extends Handler {
         }
 
         try {
-            out.append(msg);
-            // make sure the last line is always visible
-            out.setCaretPosition(out.getDocument().getLength());
+            if (msg.startsWith("\r")) {
+                // Simulate carriage return
+                out.replaceRange(msg, out.getLineStartOffset(out.getLineCount() - 1), out.getDocument().getLength());
+            } else {
+                out.append(msg);
+            }
+            // make sure the begining of last line is always visible
+            out.setCaretPosition(out.getLineStartOffset(out.getLineCount() - 1));
         } catch (Exception ex) {
             reportError(null, ex, ErrorManager.WRITE_FAILURE);
         }

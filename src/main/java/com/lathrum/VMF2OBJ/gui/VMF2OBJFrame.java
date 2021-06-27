@@ -1,6 +1,7 @@
 package com.lathrum.VMF2OBJ.gui;
 
 import java.io.File;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -265,7 +266,7 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 				try {
 					VMF2OBJ.main(job);
 				} catch (Exception e) {
-					System.out.println("Fatal error: " + e.toString());
+					VMF2OBJ.logger.log(Level.SEVERE, "Fatal error: " + e.toString());
 				} finally {
 					// activate buttons
 					setButtonsEnabled(true);
@@ -284,10 +285,10 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 		setTitle("VMF2OBJ " + properties.getProperty("version"));
 
 		// try {
-		// 	URL iconUrl = getClass().getResource("resources/icon.png");
-		// 	Image icon = Toolkit.getDefaultToolkit().createImage(iconUrl);
-		// 	setIconImage(icon);
-		// 	logFrame.setIconImage(icon);
+		// URL iconUrl = getClass().getResource("resources/icon.png");
+		// Image icon = Toolkit.getDefaultToolkit().createImage(iconUrl);
+		// setIconImage(icon);
+		// logFrame.setIconImage(icon);
 		// } catch (Exception ex) {
 		// }
 	}
@@ -316,7 +317,7 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 
 		setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 		setLocationByPlatform(true);
-		setSize(500, 500);
+		setSize(650, 500);
 
 		listResources.setModel(getFilesModel());
 		scrollResources.setViewportView(listResources);

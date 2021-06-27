@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 
 import com.lathrum.VMF2OBJ.VMF2OBJ;
 import com.lathrum.VMF2OBJ.dataStructure.Plane;
@@ -56,7 +57,7 @@ public class Side {
 		// Theoretically source only allows convex shapes, and fixes any problems upon saving...
 
 		if (intersections.size() < 3) {
-			System.out.println("Malformed side " + side.id + ", only " + intersections.size() + " points");
+			VMF2OBJ.logger.log(Level.WARNING, "Malformed side " + side.id + ", only " + intersections.size() + " points");
 			return null;
 		}
 

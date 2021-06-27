@@ -177,7 +177,7 @@ public class VMF {
 							disp = splice(disp, alphas, disp.length() - 1);
 							disp = disp.replaceAll(cleanUpRegex, "$1"); // remove commas at the end of a list
 							disps = disp;
-							// System.out.println(disp);
+							// VMF2OBJ.logger.log(Level.FINE, disp);
 						}
 						dispMatcher = dispPattern.matcher(side);
 					}
@@ -239,7 +239,7 @@ public class VMF {
 		text = text.replaceAll(cleanUpRegex, "$1"); // remove commas at the end of a list
 		text = text.replaceAll(",,", ",");
 
-		// System.out.println(text);
+		// VMF2OBJ.logger.log(Level.FINE, text);
 		VMF vmf = VMF2OBJ.gson.fromJson(text, VMF.class);
 		return vmf;
 	}

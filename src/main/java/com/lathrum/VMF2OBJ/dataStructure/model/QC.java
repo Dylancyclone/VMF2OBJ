@@ -2,8 +2,11 @@ package com.lathrum.VMF2OBJ.dataStructure.model;
 
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.lathrum.VMF2OBJ.VMF2OBJ;
 
 public class QC {
 	public String ModelName;
@@ -46,7 +49,7 @@ public class QC {
 		if (modelNameMatcher.find()) {
 			modelName = modelNameMatcher.group(1);
 		} else {
-			System.out.println("Failed to find modelName");
+			VMF2OBJ.logger.log(Level.WARNING, "Failed to find modelName");
 		}
 
 		Matcher bodyGroupMatcher = Pattern.compile("(\"bodygroup\"\"[a-zA-Z0-9._/]+\"\\{([a-zA-Z0-9._/\" ]+)\\})")

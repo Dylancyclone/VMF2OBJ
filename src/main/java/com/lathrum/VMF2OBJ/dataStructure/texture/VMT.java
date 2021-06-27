@@ -105,7 +105,7 @@ public class VMT {
 
 		text = text.replaceAll("([a-zA-Z_]+dx[6-9])", "\"$1\":"); // Fix fallback shaders
 
-		// System.out.println(text);
+		// VMF2OBJ.logger.log(Level.FINE, text);
 		VMT vmt = VMF2OBJ.gson.fromJson(text, VMT.class);
 		return vmt;
 	}

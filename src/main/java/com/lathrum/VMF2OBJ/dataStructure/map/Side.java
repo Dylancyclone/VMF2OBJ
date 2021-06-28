@@ -11,6 +11,7 @@ import java.util.logging.Level;
 import com.lathrum.VMF2OBJ.VMF2OBJ;
 import com.lathrum.VMF2OBJ.dataStructure.Plane;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
+import com.lathrum.VMF2OBJ.dataStructure.VectorSorter;
 
 public class Side {
 	public String id;
@@ -54,7 +55,8 @@ public class Side {
 			}
 		}
 
-		// Theoretically source only allows convex shapes, and fixes any problems upon saving...
+		// Theoretically source only allows convex shapes, and fixes any problems upon
+		// saving...
 
 		if (intersections.size() < 3) {
 			VMF2OBJ.logger.log(Level.WARNING, "Malformed side " + side.id + ", only " + intersections.size() + " points");
@@ -69,26 +71,11 @@ public class Side {
 		final Vector3 normal = new Plane(side).normal().normalize();
 
 		List<Vector3> IntersectionsList = new ArrayList<Vector3>(intersections);
+		VectorSorter sorter = new VectorSorter(normal, center);
 		Collections.sort(IntersectionsList, new Comparator<Vector3>() {
 			@Override
 			public int compare(Vector3 o1, Vector3 o2) {
-				double det = Vector3.dot(normal, Vector3.cross(o1.subtract(center), o2.subtract(center)));
-				if (det < 0) {
-					return -1;
-				}
-				if (det > 0) {
-					return 1;
-				}
-
-				// If 0, then they are colinear, just select which point is further from the
-				// center
-				double d1 = o1.subtract(center).magnitude();
-				double d2 = o2.subtract(center).magnitude();
-				if (d1 < d2) {
-					return -1;
-				} else {
-					return 1;
-				}
+				return ((Double) sorter.getOrder(o1)).compareTo((Double) sorter.getOrder(o2));
 			}
 		});
 

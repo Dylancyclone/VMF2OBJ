@@ -219,6 +219,14 @@ public class Vector3 {
 		return Math.sqrt(Math.pow(this.x - vector.x, 2) + Math.pow(this.y - vector.y, 2) + Math.pow(this.z - vector.z, 2));
 	}
 
+	public static Vector3 getLonger(Vector3 vectorA, Vector3 vectorB) {
+		return vectorA.magnitude() > vectorB.magnitude() ? vectorA : vectorB;
+	}
+
+	public Vector3 getLonger(Vector3 vector) {
+		return this.magnitude() > vector.magnitude() ? this : vector;
+	}
+
 	public int closestIndex(Vector3[] vectors) {
 		if (vectors.length == 0) {
 			return -1;

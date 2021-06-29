@@ -51,6 +51,30 @@ public class Side {
 				if (!Vector3.pointInHull(intersection, solid.sides)) {
 					continue;
 				}
+
+				// If the intersection is close to an existing intersection
+				boolean alreadyExists = false;
+				for (Vector3 existingIntersection : intersections) {
+					if (existingIntersection.distance(intersection) < 0.2) {
+						alreadyExists = true;
+						break;
+					}
+				}
+				if (alreadyExists) {
+					continue;
+				}
+
+				// If the intersection is close to an existing point on another side
+				for (Side existingSide : solid.sides) {
+					for (Vector3 existingPoint : existingSide.points) {
+						if (existingPoint.distance(intersection) < 0.2) {
+							// Merge with the existing point
+							intersection = existingPoint;
+							break;
+						}
+					}
+				}
+
 				intersections.add((intersection));
 			}
 		}

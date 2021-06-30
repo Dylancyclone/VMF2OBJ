@@ -43,9 +43,22 @@ public class VPKEntry implements Entry {
 	}
 
 	public byte[] readData() throws IOException, Exception {
+		byte[] data;
+		int dataOffset = 0;
 		// check for preload data
-		if (this.preloadData != null)
-			return this.preloadData;
+		if (this.preloadData != null) {
+			if (this.length == 0) {
+				return this.preloadData;
+			}
+			// Allocate enough space for the data
+			data = new byte[this.preloadData.length + this.length];
+			// Copy in the preloaded data
+			System.arraycopy(this.preloadData, 0, data, 0, this.preloadData.length);
+			// If there's additional data let it know to insert after the preloaded data
+			dataOffset = this.preloadData.length;
+		} else {
+			data = new byte[this.length];
+		}
 
 		// get target archive
 		File target = null;
@@ -63,9 +76,8 @@ public class VPKEntry implements Entry {
 			}
 
 			// read data
-			byte[] data = new byte[this.length];
 			fileInputStream.skip(this.offset);
-			fileInputStream.read(data, 0, this.length);
+			fileInputStream.read(data, dataOffset, this.length);
 
 			return data;
 		}

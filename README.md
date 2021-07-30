@@ -10,22 +10,24 @@ Watch a demonstration video:
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-1.1.2-jar-with-dependencies.jar [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS]`
+`mvn package;java -jar ./target/VMF2OBJ-2.0.0-rc.1-jar-with-dependencies.jar [VMF_FILE] [args...]`
 
 ```
-usage: vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]
- -e,--externalPath <arg>   Semi-colon separated list of folders for
-                           external custom content (such as materials or
-                           models)
- -h,--help                 Show this message
- -q,--quiet                Suppress warnings
- -t,--tools                Ignore tool brushes
+usage: vmf2obj [VMF_FILE] [args...]
+ -h,--help                  Show this message
+ -o,--output <arg>          Name of the output files. Defaults to the name
+                            of the VMF file
+ -q,--quiet                 Suppress warnings
+ -r,--resourcePaths <arg>   Semi-colon separated list of VPK files and
+                            folders for external custom content (such as
+                            materials or models)
+ -t,--tools                 Ignore tool brushes
 ```
 
 Example:
 
 ```
-java -jar .\vmf2obj.jar .\input.vmf .\output "D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_misc_dir.vpk;D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_textures_dir.vpk" -e "C:\path\to\custom\content\;C:\path\to\more\custom\content\" -t
+java -jar .\vmf2obj.jar .\input.vmf -o .\output -r "D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_misc_dir.vpk;D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_textures_dir.vpk;C:\path\to\custom\content\;C:\path\to\more\custom\content\" -t
 ```
 
 ## Packaged Dependencies

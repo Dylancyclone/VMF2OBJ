@@ -24,8 +24,6 @@ public class VMF2OBJCLI {
 
 		// Prepare Arguments
 		try {
-			job.file = new VMFFileEntry(new File(args[0]), args[1]);
-
 			// parse the command line arguments
 			CommandLine cmd = parser.parse(options, args);
 			if (cmd.hasOption("h") || args[0].charAt(0) == '-') {

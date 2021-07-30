@@ -1,3 +1,10 @@
+?/??/???? 2.0.0:
++ Added GUI version of application. The GUI is accessible by double-clicking on the .jar file, while the CLI is still accessible through the terminal
+* Verticies that are within 0.2 units of each other will be merged together, greatly reducing the number of extraneous vertices when dealing with complex brushes
+* Fix colinear and equidistant points causing a crash
+* Fix brushes having inverted normals
+* Fix compatibility with new large VMT files
+
 4/27/2021 1.1.3:
 * Improve transparent material compatibility
 * Fix handling materials with keyless commands/values

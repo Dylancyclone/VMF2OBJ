@@ -505,22 +505,32 @@ public class VMF2OBJ {
 						}
 					} else {
 						// Points are defined in this order:
-						// 1 4
-						// 2 3
+						// 3 0
+						// 2 1
 						// -or-
-						// A D
-						// B C
+						// D A
+						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
-						// logger.log(Level.FINE, ad);
-						// logger.log(Level.FINE, ab);
+						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
+						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];
+						Vector3 c = side.points[startIndex];
+						Vector3 d = side.points[Math.floorMod((startIndex + 1), 4)];
+						Vector3 cd = d.subtract(c);
+						Vector3 cb = b.subtract(c);
+						Vector3 ba = a.subtract(b);
+						// logger.log(Level.FINE, cd);
+						// logger.log(Level.FINE, cb);
 						for (int i = 0; i < side.dispinfo.normals.length; i++) { // rows
 							for (int j = 0; j < side.dispinfo.normals[0].length; j++) { // columns
+								double rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								double colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								Vector3 point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
 								verticies.add(point);
 							}
@@ -528,7 +538,6 @@ public class VMF2OBJ {
 					}
 				}
 
-				// TODO: Margin of error?
 				Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
 				ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 
@@ -775,69 +784,94 @@ public class VMF2OBJ {
 						vertexTextureOffset += side.points.length;
 					} else {
 						// Points are defined in this order:
-						// 1 4
-						// 2 3
+						// 3 0
+						// 2 1
 						// -or-
-						// A D
-						// B C
+						// D A
+						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
+						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
+						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];
+						Vector3 c = side.points[startIndex];
+						Vector3 d = side.points[Math.floorMod((startIndex + 1), 4)];
+						Vector3 cd = d.subtract(c);
+						Vector3 cb = b.subtract(c);
+						Vector3 ba = a.subtract(b);
+						// logger.log(Level.FINE, cd);
+						// logger.log(Level.FINE, cb);
 						for (int i = 0; i < side.dispinfo.normals.length - 1; i++) { // all rows but last
 							for (int j = 0; j < side.dispinfo.normals[0].length - 1; j++) { // all columns but last
 								buffer = "";
+								double rowProgress, colProgress, u, v;
+
+								rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								Vector3 point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
-								double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
+								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
-								double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
+								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset) + " ";
 
+								rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)(i + 1) / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i + 1][j].multiply(side.dispinfo.distances[i + 1][j]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 1) + " ";
 
+								rowProgress = (double)(j + 1) / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)(i + 1) / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i + 1][j + 1].multiply(side.dispinfo.distances[i + 1][j + 1]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 2) + " ";
 
+								rowProgress = (double)(j + 1) / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j + 1].multiply(side.dispinfo.distances[i][j + 1]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
@@ -1013,7 +1047,6 @@ public class VMF2OBJ {
 						qc.triangles[i] = temp;
 					}
 
-					// TODO: Margin of error?
 					Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
 					ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 

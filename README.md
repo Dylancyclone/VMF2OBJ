@@ -10,7 +10,7 @@ Watch a demonstration video:
 
 From the root directory, run:
 
-`mvn package;java -jar ./target/VMF2OBJ-2.0.0-rc.1-jar-with-dependencies.jar [VMF_FILE] [args...]`
+`mvn package;java -jar ./target/VMF2OBJ-2.0.0-rc.2-jar-with-dependencies.jar [VMF_FILE] [args...]`
 
 ```
 usage: vmf2obj [VMF_FILE] [args...]

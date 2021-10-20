@@ -99,7 +99,7 @@ public class Side {
 		Collections.sort(IntersectionsList, new Comparator<Vector3>() {
 			@Override
 			public int compare(Vector3 o1, Vector3 o2) {
-				return ((Double) sorter.getOrder(o2)).compareTo((Double) sorter.getOrder(o1));
+				return ((Double) sorter.getOrder(o1)).compareTo((Double) sorter.getOrder(o2));
 			}
 		});
 

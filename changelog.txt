@@ -6,6 +6,7 @@
 * Fix displacements being exported incorrectly
 * Fix compatibility with new large VMT files
 * Fix compatibility with VMT files that have GPU conditional statements
+* Fix achievement arrays causing crashes
 
 4/27/2021 1.1.3:
 * Improve transparent material compatibility

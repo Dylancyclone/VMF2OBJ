@@ -40,7 +40,7 @@ public class VMF {
 
 	public static VMF parseVMF(String text) {
 		String objectRegex = "([a-zA-z._0-9]+)([{\\[])";
-		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[^\"]*\")";
+		String keyValueRegex = "(\"[a-zA-z._0-9@]+\"|\"\")(\"[^\"]*\")";
 		String objectCommaRegex = "[}\\]]\"";
 		String cleanUpRegex = ",([}\\]])";
 

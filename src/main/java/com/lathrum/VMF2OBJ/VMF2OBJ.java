@@ -33,6 +33,7 @@ public class VMF2OBJ {
 	public static String CrowbarLibPath;
 	public static boolean quietMode = false;
 	public static boolean ignoreTools = false;
+	public static boolean flipDisplacements = false;
 	public static String appVersion;
 
 	/**
@@ -379,6 +380,7 @@ public class VMF2OBJ {
 		String matLibName = job.file.mtlFile.toString();
 		quietMode = job.SuppressWarnings;
 		ignoreTools = job.skipTools;
+		flipDisplacements = job.flipDisplacements;
 		final File tempDir;
 
 		// Clean working directory
@@ -511,6 +513,14 @@ public class VMF2OBJ {
 						// D A
 						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
+
+						// Some maps have the displacements seemingly inverted.
+						// Not sure what causes this, but it seems to be consistent within a map.
+						// Meaning, if the user notices the displacements are off, they can
+						// enable this setting to attempt to fix them across the entire map.
+						// See: https://github.com/Dylancyclone/VMF2OBJ/issues/30#issuecomment-1059908043
+						if (flipDisplacements) startIndex = Math.floorMod((startIndex - 2), 4);
+
 						//Get adjacent points by going around counter-clockwise
 						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
 						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];
@@ -790,6 +800,14 @@ public class VMF2OBJ {
 						// D A
 						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
+
+						// Some maps have the displacements seemingly inverted.
+						// Not sure what causes this, but it seems to be consistent within a map.
+						// Meaning, if the user notices the displacements are off, they can
+						// enable this setting to attempt to fix them across the entire map.
+						// See: https://github.com/Dylancyclone/VMF2OBJ/issues/30#issuecomment-1059908043
+						if (flipDisplacements) startIndex = Math.floorMod((startIndex - 2), 4);
+
 						//Get adjacent points by going around counter-clockwise
 						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
 						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];

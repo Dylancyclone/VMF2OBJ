@@ -10,4 +10,5 @@ public class Job {
 	public ArrayList<Path> resourcePaths = new ArrayList<Path>();
 	public boolean SuppressWarnings;
 	public boolean skipTools;
+	public boolean flipDisplacements;
 }

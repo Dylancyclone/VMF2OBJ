@@ -311,6 +311,7 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 		panelSettings = new javax.swing.JPanel();
 		checkBoxQuietMode = new javax.swing.JCheckBox();
 		checkBoxSkipToolBrushes = new javax.swing.JCheckBox();
+		checkBoxFlipDisplacements = new javax.swing.JCheckBox();
 		buttonConvert = new javax.swing.JButton();
 		logScrollPane = new javax.swing.JScrollPane();
 		logTextArea = new javax.swing.JTextArea();
@@ -419,18 +420,28 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 			}
 		});
 
+		checkBoxFlipDisplacements.setText("Flip displacements");
+		checkBoxFlipDisplacements.setToolTipText("If your displacements look strange, try this option");
+		checkBoxFlipDisplacements.addActionListener(new java.awt.event.ActionListener() {
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
+				checkBoxFlipDisplacementsActionPerformed(evt);
+			}
+		});
+
 		javax.swing.GroupLayout panelTexturesLayout = new javax.swing.GroupLayout(panelSettings);
 		panelSettings.setLayout(panelTexturesLayout);
 		panelTexturesLayout
 				.setHorizontalGroup(panelTexturesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 						.addGroup(panelTexturesLayout.createSequentialGroup().addContainerGap()
 								.addGroup(panelTexturesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-										.addComponent(checkBoxSkipToolBrushes).addComponent(checkBoxQuietMode))));
+								.addComponent(checkBoxFlipDisplacements).addComponent(checkBoxSkipToolBrushes).addComponent(checkBoxQuietMode))));
 		panelTexturesLayout
 				.setVerticalGroup(panelTexturesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 						.addGroup(panelTexturesLayout.createSequentialGroup().addContainerGap().addComponent(checkBoxQuietMode)
 								.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-								.addComponent(checkBoxSkipToolBrushes)));
+								.addComponent(checkBoxSkipToolBrushes)
+								.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+								.addComponent(checkBoxFlipDisplacements)));
 
 		tabbedPaneOptions.addTab("Settings", panelSettings);
 
@@ -556,6 +567,10 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 		job.skipTools = checkBoxSkipToolBrushes.isSelected();
 	}
 
+	private void checkBoxFlipDisplacementsActionPerformed(java.awt.event.ActionEvent evt) {
+		job.flipDisplacements = checkBoxFlipDisplacements.isSelected();
+	}
+
 	private void buttonConvertActionPerformed(java.awt.event.ActionEvent evt) {
 		VMFFileEntry entry = job.file;
 		File vmfFile = saveVmfFileDialog(new File(entry.outPath));
@@ -576,6 +591,7 @@ public class VMF2OBJFrame extends javax.swing.JFrame {
 	private javax.swing.JButton buttonRemoveAll;
 	private javax.swing.JCheckBox checkBoxQuietMode;
 	private javax.swing.JCheckBox checkBoxSkipToolBrushes;
+	private javax.swing.JCheckBox checkBoxFlipDisplacements;
 	private javax.swing.JLabel labelDnDTip;
 	private javax.swing.JList<Path> listResources;
 	private javax.swing.JPanel panelFiles;

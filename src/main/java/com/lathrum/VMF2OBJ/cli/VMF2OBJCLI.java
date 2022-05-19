@@ -19,6 +19,7 @@ public class VMF2OBJCLI {
 				"Semi-colon separated list of VPK files and folders for external custom content (such as materials or models)");
 		options.addOption("q", "quiet", false, "Suppress warnings");
 		options.addOption("t", "tools", false, "Ignore tool brushes");
+		options.addOption("d", "displacementFlip", false, "Flip displacements (If your displacements look strange, try this option)");
 
 		Job job = new Job();
 
@@ -47,6 +48,9 @@ public class VMF2OBJCLI {
 			}
 			if (cmd.hasOption("t")) {
 				job.skipTools = true;
+			}
+			if (cmd.hasOption("d")) {
+				job.flipDisplacements = true;
 			}
 		} catch (ParseException e) {
 			System.err.println(e.getMessage());

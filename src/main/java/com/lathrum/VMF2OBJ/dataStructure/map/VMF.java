@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.lathrum.VMF2OBJ.App;
+import com.lathrum.VMF2OBJ.VMF2OBJ;
 import com.lathrum.VMF2OBJ.dataStructure.Vector3;
 
 public class VMF {
@@ -40,15 +40,16 @@ public class VMF {
 
 	public static VMF parseVMF(String text) {
 		String objectRegex = "([a-zA-z._0-9]+)([{\\[])";
-		String keyValueRegex = "(\"[a-zA-z._0-9]+\")(\"[^\"]*\")";
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\"|\"\")(\"[^\"]*\")";
 		String objectCommaRegex = "[}\\]]\"";
 		String cleanUpRegex = ",([}\\]])";
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("(?m)^\\s*//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\x1B|#", ""); // Remove all illegal characters
+		text = text.replaceAll("\\x1B|#|@", ""); // Remove all illegal characters
 		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("\"Code\"(.*)", ""); // Remove gmod Lua code
+		text = text.replaceAll("(\"achievement.+)\\[[0-9]\\]\"", "$1\""); // Remove achievement arrays
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" \"", "\"\""); // Remove all whitespaces and newlines not in quotes
 		// text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
@@ -177,7 +178,7 @@ public class VMF {
 							disp = splice(disp, alphas, disp.length() - 1);
 							disp = disp.replaceAll(cleanUpRegex, "$1"); // remove commas at the end of a list
 							disps = disp;
-							// System.out.println(disp);
+							// VMF2OBJ.logger.log(Level.FINE, disp);
 						}
 						dispMatcher = dispPattern.matcher(side);
 					}
@@ -239,8 +240,8 @@ public class VMF {
 		text = text.replaceAll(cleanUpRegex, "$1"); // remove commas at the end of a list
 		text = text.replaceAll(",,", ",");
 
-		// System.out.println(text);
-		VMF vmf = App.gson.fromJson(text, VMF.class);
+		// VMF2OBJ.logger.log(Level.FINE, text);
+		VMF vmf = VMF2OBJ.gson.fromJson(text, VMF.class);
 		return vmf;
 	}
 
@@ -306,7 +307,7 @@ public class VMF {
 			}
 
 			j = 0;
-			Solid solidProxy = App.gson.fromJson(App.gson.toJson(solid, Solid.class), Solid.class);
+			Solid solidProxy = VMF2OBJ.gson.fromJson(VMF2OBJ.gson.toJson(solid, Solid.class), Solid.class);
 			for (Side side : solidProxy.sides) {
 				Side newSide = Side.completeSide(side, solidProxy);
 				if (newSide != null) {

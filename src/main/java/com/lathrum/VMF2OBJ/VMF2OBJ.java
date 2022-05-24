@@ -1,21 +1,22 @@
 package com.lathrum.VMF2OBJ;
 
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.*;
-import javax.imageio.ImageIO;
 import com.google.gson.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.awt.image.BufferedImage;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+
+import me.tongfei.progressbar.DelegatingProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
-import org.apache.commons.cli.*;
 
 import com.lathrum.VMF2OBJ.fileStructure.*;
 import com.lathrum.VMF2OBJ.dataStructure.*;
@@ -23,10 +24,11 @@ import com.lathrum.VMF2OBJ.dataStructure.map.*;
 import com.lathrum.VMF2OBJ.dataStructure.model.*;
 import com.lathrum.VMF2OBJ.dataStructure.texture.*;
 
-public class App {
+public class VMF2OBJ {
 
 	public static Gson gson = new Gson();
 	public static Process proc;
+	public static Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 	public static String VTFLibPath;
 	public static String CrowbarLibPath;
 	public static boolean quietMode = false;
@@ -60,10 +62,10 @@ public class App {
 		URI fileURI;
 
 		try {
-			uri = App.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+			uri = VMF2OBJ.class.getProtectionDomain().getCodeSource().getLocation().toURI();
 		} catch (Exception e) {
-			System.err.println("Failed to get executable's location, do you have permissions?");
-			System.err.println(e.toString());
+			logger.log(Level.SEVERE, "Failed to get executable's location, do you have permissions?");
+			logger.log(Level.SEVERE, e.toString());
 		}
 
 		try {
@@ -83,8 +85,8 @@ public class App {
 			}
 			zipFile.close();
 		} catch (Exception e) {
-			System.err.println("Failed to extract tools, do you have permissions?");
-			System.err.println(e.toString());
+			logger.log(Level.SEVERE, "Failed to extract tools, do you have permissions?");
+			logger.log(Level.SEVERE, e.toString());
 		}
 	}
 
@@ -220,7 +222,7 @@ public class App {
 			if (object != null && object.get(i).getFullPath().equalsIgnoreCase(path)) {
 				return i;
 			}
-			// else{System.out.println(object.get(i).getFullPath());}
+			// else{logger.log(Level.FINE, object.get(i).getFullPath());}
 		}
 		return -1;
 	}
@@ -237,7 +239,7 @@ public class App {
 			if (object != null && object.get(i).getFullPath().toLowerCase().contains(pattern.toLowerCase())) {
 				indicies.add(i);
 			}
-			// else{System.out.println(object.get(i).getFullPath());}
+			// else{logger.log(Level.FINE, object.get(i).getFullPath());}
 		}
 		return indicies;
 	}
@@ -290,7 +292,7 @@ public class App {
 					if (path.charAt(0) == File.separatorChar) {
 						path = path.substring(1);
 					}
-					// System.out.println("directory: " + path);
+					// logger.log(Level.FINE, "directory: " + path);
 					entries.addAll(addExtraFiles(start, file));
 				} else {
 					String path = file.getCanonicalPath().substring(start.length());
@@ -298,7 +300,7 @@ public class App {
 						path = path.substring(1);
 					}
 					path = path.replaceAll("\\\\", "/");
-					// System.out.println("file: " + path);
+					// logger.log(Level.FINE, "file: " + path);
 					if (path.lastIndexOf("/") == -1) {
 						entries.add(new FileEntry(file.getName().substring(0, file.getName().lastIndexOf('.')),
 								getFileExtension(file), "", file.toString()));
@@ -309,8 +311,8 @@ public class App {
 				}
 			}
 		} catch (IOException e) {
-			System.err.println("Failed to load external resources");
-			System.err.println(e.toString());
+			logger.log(Level.SEVERE, "Failed to load external resources");
+			logger.log(Level.SEVERE, e.toString());
 		}
 		return entries;
 	}
@@ -337,15 +339,15 @@ public class App {
 		} catch (IOException ignored) { /* */ }
 		String pad = new String(new char[Math.max(consoleWidth - text.length(), 0)]).replace("\0", " ");
 
-		System.out.println("\r" + text + pad);
+		logger.log(Level.INFO, "\r" + text + pad);
 	}
 
 	/**
 	 * Convert Source .vmf files to generic .obj
-	 * @param args Launch options for the program. Read the first couple lines of main to see valid inputs
+	 * @param job Job object that represents the configuration for the conversion
 	 * @throws Exception Unhandled exception
 	 */
-	public static void main(String[] args) throws Exception {
+	public static void main(Job job) throws Exception {
 		// The General outline of the program is as follows:
 
 		// Read Geometry
@@ -359,17 +361,10 @@ public class App {
 		// Write Models
 		// Write Materials
 		// Clean Up
-		
-		CommandLineParser parser = new DefaultParser();
-		Options options = new Options();
-		options.addOption("h", "help", false, "Show this message");
-		options.addOption("e", "externalPath", true, "Semi-colon separated list of folders for external custom content (such as materials or models)");
-		options.addOption("q", "quiet", false, "Suppress warnings");
-		options.addOption("t", "tools", false, "Ignore tool brushes");
 
 		// Load app version
 		final Properties properties = new Properties();
-		properties.load(App.class.getClassLoader().getResourceAsStream("project.properties"));
+		properties.load(VMF2OBJ.class.getClassLoader().getResourceAsStream("project.properties"));
 		appVersion = properties.getProperty("version");
 
 		Scanner in;
@@ -379,58 +374,17 @@ public class App {
 		HashMap<String, QC> modelCache = new HashMap<String, QC>();
 		PrintWriter objFile;
 		PrintWriter materialFile;
-		String outPath = "";
-		String objName = "";
-		String matLibName = "";
+		String outPath = job.file.outPath;
+		String objName = job.file.objFile.toString();
+		String matLibName = job.file.mtlFile.toString();
+		quietMode = job.SuppressWarnings;
+		ignoreTools = job.skipTools;
 		final File tempDir;
-
-		// Prepare Arguments
-		try {
-			outPath = args[1];
-			objName = outPath + ".obj";
-			matLibName = outPath + ".mtl";
-
-			// parse the command line arguments
-			CommandLine cmd = parser.parse(options, args);
-			if (cmd.hasOption("h") || args[0].charAt(0) == '-' || args[1].charAt(0) == '-' || args[2].charAt(0) == '-') {
-				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-				System.exit(0);
-			}
-			if (cmd.hasOption("e")) {
-				String[] externalFolders = cmd.getOptionValue("e").split(";");
-				for (String path : externalFolders) {
-					vpkEntries.addAll(addExtraFiles(path, new File(path)));
-				}
-			}
-			if (cmd.hasOption("q")) {
-				quietMode = true;
-			}
-			if (cmd.hasOption("t")) {
-				ignoreTools = true;
-			}
-		} catch (ParseException e) {
-			System.err.println(e.getMessage());
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-			System.exit(0);
-		} catch (Exception e) {
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("vmf2obj [VMF_FILE] [OUTPUT_FILE] [VPK_PATHS] [args...]", options, false);
-			System.exit(0);
-		}
-
-		// Check for valid arguments
-		if (Paths.get(outPath).getParent() == null) {
-			System.err.println("Invalid output file. Make sure it's either an absolute or relative path");
-			System.exit(0);
-		}
 
 		// Clean working directory
 		try {
 			deleteRecursiveByExtension(new File(Paths.get(outPath).getParent().resolve("materials").toString()), "vtf"); // Delete unconverted textures
 		} catch (Exception ignored) {}
-
 		tempDir = new File(System.getProperty("java.io.tmpdir") + File.separator + "vmf2objtemp");
 		tempDir.mkdirs();
 		// When the program shuts down, delete temporary directory
@@ -446,33 +400,34 @@ public class App {
 		try {
 			extractLibraries(tempDir.getAbsolutePath());
 		} catch (Exception e) {
-			System.err.println("Failed to extract tools, do you have permissions?");
-			System.err.println(e.toString());
+			logger.log(Level.SEVERE, "Failed to extract tools, do you have permissions?");
+			logger.log(Level.SEVERE, e.toString());
 		}
 
-		System.out.println("Starting VMF2OBJ conversion v" + appVersion);
+		logger.log(Level.INFO, "Starting VMF2OBJ conversion v" + appVersion);
 
 		//
 		// Read VPK
 		//
 
-		// Open vpk file
-		System.out.println("[1/5] Reading VPK file(s)...");
-		String[] vpkFiles = args[2].split(";");
-		for (String path : vpkFiles) {
+		// Load resources
+		logger.log(Level.INFO, "[1/5] Reading VPK file(s) and custom content...");
+		for (Path path : job.resourcePaths) {
+			if (Files.isDirectory(path)) {
+				vpkEntries.addAll(addExtraFiles(path.toString(), path.toFile()));
+			} else {
+				VPK vpk = new VPK(path.toFile());
+				try {
+					vpk.load();
+				} catch (Exception e) {
+					logger.log(Level.SEVERE, "Error while loading vpk file: " + e.getMessage());
+					return;
+				}
 
-			File vpkFile = new File(path);
-			VPK vpk = new VPK(vpkFile);
-			try {
-				vpk.load();
-			} catch (Exception e) {
-				System.err.println("Error while loading vpk file: " + e.getMessage());
-				return;
-			}
-
-			for (Directory directory : vpk.getDirectories()) {
-				for (Entry entry : directory.getEntries()) {
-					vpkEntries.add(entry);
+				for (Directory directory : vpk.getDirectories()) {
+					for (Entry entry : directory.getEntries()) {
+						vpkEntries.add(entry);
+					}
 				}
 			}
 		}
@@ -480,12 +435,12 @@ public class App {
 		// Read input file
 		String text = "";
 		try {
-			text = readFile(args[0]);
+			text = readFile(job.file.vmfFile.toString());
 		} catch (IOException e) {
-			System.err.println("Failed to read file: " + args[0] + ", does file exist?");
-			System.err.println(e.toString());
+			logger.log(Level.SEVERE, "Failed to read file: " + job.file.vmfFile + ", does file exist?");
+			logger.log(Level.SEVERE, e.toString());
 		}
-		// System.out.println(text);
+		// logger.log(Level.FINE, text);
 
 		try {
 			File directory = new File(new File(outPath).getParent());
@@ -493,11 +448,11 @@ public class App {
 				directory.mkdirs();
 			}
 
-			in = new Scanner(new File(args[0]));
+			in = new Scanner(job.file.vmfFile);
 			objFile = new PrintWriter(new FileOutputStream(objName));
 			materialFile = new PrintWriter(new FileOutputStream(matLibName));
 		} catch (IOException e) {
-			System.err.println("Error while opening file: " + e.getMessage());
+			logger.log(Level.SEVERE, "Error while opening file: " + e.getMessage());
 			return;
 		}
 
@@ -505,7 +460,7 @@ public class App {
 		// Read Geometry
 		//
 
-		System.out.println("[2/5] Reading geometry...");
+		logger.log(Level.INFO, "[2/5] Reading geometry...");
 
 		VMF vmf = VMF.parseVMF(text);
 		vmf = VMF.parseSolids(vmf);
@@ -522,7 +477,7 @@ public class App {
 		int vertexOffset = 1;
 		int vertexTextureOffset = 1;
 		int vertexNormalOffset = 1;
-		System.out.println("[3/5] Writing brushes...");
+		logger.log(Level.INFO, "[3/5] Writing brushes...");
 
 		objFile.println("# Decompiled with VMF2OBJ v" + appVersion + " by Dylancyclone\n");
 		materialFile.println("# Decompiled with VMF2OBJ v" + appVersion + " by Dylancyclone\n");
@@ -530,7 +485,7 @@ public class App {
 				+ matLibName.substring(formatPath(matLibName).lastIndexOf(File.separatorChar) + 1, matLibName.length()));
 
 		if (vmf.solids != null) { // There are no brushes in this VMF
-			pbb = new ProgressBarBuilder().setStyle(ProgressBarStyle.ASCII).setTaskName("Writing Brushes...").showSpeed();
+			pbb = new ProgressBarBuilder().setStyle(ProgressBarStyle.ASCII).setTaskName("Writing Brushes...").setConsumer(new DelegatingProgressBarConsumer(logger::info)).showSpeed();
 			for (Solid solid : ProgressBar.wrap(Arrays.asList(vmf.solids), pbb)) {
 				verticies.clear();
 				faces.clear();
@@ -550,22 +505,32 @@ public class App {
 						}
 					} else {
 						// Points are defined in this order:
-						// 1 4
-						// 2 3
+						// 3 0
+						// 2 1
 						// -or-
-						// A D
-						// B C
+						// D A
+						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
-						// System.out.println(ad);
-						// System.out.println(ab);
+						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
+						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];
+						Vector3 c = side.points[startIndex];
+						Vector3 d = side.points[Math.floorMod((startIndex + 1), 4)];
+						Vector3 cd = d.subtract(c);
+						Vector3 cb = b.subtract(c);
+						Vector3 ba = a.subtract(b);
+						// logger.log(Level.FINE, cd);
+						// logger.log(Level.FINE, cb);
 						for (int i = 0; i < side.dispinfo.normals.length; i++) { // rows
 							for (int j = 0; j < side.dispinfo.normals[0].length; j++) { // columns
+								double rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								double colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								Vector3 point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
 								verticies.add(point);
 							}
@@ -573,7 +538,6 @@ public class App {
 					}
 				}
 
-				// TODO: Margin of error?
 				Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
 				ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 
@@ -606,8 +570,8 @@ public class App {
 							}
 							VMTText = new String(vpkEntries.get(index).readData());
 						} catch (IOException e) {
-							System.out.println("Failed to read material: " + el);
-							System.err.println(e.toString());
+							logger.log(Level.SEVERE, "Failed to read material: " + el);
+							logger.log(Level.SEVERE, e.toString());
 						}
 
 						try {
@@ -630,7 +594,7 @@ public class App {
 					}
 					
 					int index = getEntryIndexByPath(vpkEntries, "materials/" + vmt.basetexture + ".vtf");
-					// System.out.println(index);
+					// logger.log(Level.FINE, index);
 					if (index != -1) {
 						File materialOutPath = new File(outPath);
 						materialOutPath = new File(
@@ -642,8 +606,8 @@ public class App {
 									directory.mkdirs();
 								}
 							} catch (Exception e) {
-								System.out.println("Failed to create directory: " + materialOutPath.getParent());
-								System.err.println(e.toString());
+								logger.log(Level.SEVERE, "Failed to create directory: " + materialOutPath.getParent());
+								logger.log(Level.SEVERE, e.toString());
 							}
 							try {
 								vpkEntries.get(index).extract(materialOutPath);
@@ -673,23 +637,23 @@ public class App {
 									width = TargaReader.getWidth(fileContent); 
 									height = TargaReader.getHeight(fileContent);
 								} catch (Exception e) {
-									System.out.println("Cant read Material: " + materialOutPath);
-									// System.out.println(e);
+									logger.log(Level.WARNING, "Cant read Material: " + materialOutPath);
+									// logger.log(Level.SEVERE, e);
 								}
-								// System.out.println("Adding Material: "+ el);
+								// logger.log(Level.FINE, "Adding Material: "+ el);
 								textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(), width, height));
 							} catch (Exception e) {
-								System.err.println("Failed to extract material: " + vmt.basetexture);
-								System.err.println(e.toString());
+								logger.log(Level.SEVERE, "Failed to extract material: " + vmt.basetexture);
+								logger.log(Level.SEVERE, e.toString());
 							}
 
 							if (vmt.bumpmap != null) { // If the material has a bump map associated with it
 								if (vmt.bumpmap.endsWith(".vtf")) {
 									vmt.bumpmap = vmt.bumpmap.substring(0, vmt.bumpmap.lastIndexOf('.')); // snip the extension
 								}
-								// System.out.println("Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
+								// logger.log(Level.FINE, "Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
 								int bumpMapIndex = getEntryIndexByPath(vpkEntries, "materials/" + vmt.bumpmap + ".vtf");
-								// System.out.println(bumpMapIndex);
+								// logger.log(Level.FINE, bumpMapIndex);
 								if (bumpMapIndex != -1) {
 									File bumpMapOutPath = new File(outPath);
 									bumpMapOutPath = new File(formatPath(
@@ -701,8 +665,8 @@ public class App {
 												directory.mkdirs();
 											}
 										} catch (Exception e) {
-											System.out.println("Failed to create directory: " + materialOutPath.getParent());
-											System.err.println(e.toString());
+											logger.log(Level.SEVERE, "Failed to create directory: " + materialOutPath.getParent());
+											logger.log(Level.SEVERE, e.toString());
 										}
 										try {
 											vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
@@ -717,8 +681,8 @@ public class App {
 											while ((reader.readLine()) != null) {}
 											proc.waitFor();
 										} catch (Exception e) {
-											System.err.println("Failed to extract bump material: " + vmt.bumpmap);
-											System.err.println(e.toString());
+											logger.log(Level.SEVERE, "Failed to extract bump material: " + vmt.bumpmap);
+											logger.log(Level.SEVERE, e.toString());
 										}
 									}
 								}
@@ -745,7 +709,7 @@ public class App {
 							int textureIndex = getTextureIndexByName(textures, el);
 							if (textureIndex == -1) { // But this is a new material
 								textureIndex = getTextureIndexByFileName(textures, vmt.basetexture);
-								// System.out.println("Adding Material: "+ el);
+								// logger.log(Level.FINE, "Adding Material: "+ el);
 								textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(),
 										textures.get(textureIndex).width, textures.get(textureIndex).height));
 
@@ -820,69 +784,94 @@ public class App {
 						vertexTextureOffset += side.points.length;
 					} else {
 						// Points are defined in this order:
-						// 1 4
-						// 2 3
+						// 3 0
+						// 2 1
 						// -or-
-						// A D
-						// B C
+						// D A
+						// C B
 						int startIndex = side.dispinfo.startposition.closestIndex(side.points);
 						//Get adjacent points by going around counter-clockwise
-						Vector3 ad = side.points[(startIndex + 1) % 4].subtract(side.points[startIndex]);
-						Vector3 ab = side.points[(startIndex + 3) % 4].subtract(side.points[startIndex]);
+						Vector3 a = side.points[Math.floorMod((startIndex - 2), 4)];
+						Vector3 b = side.points[Math.floorMod((startIndex - 1), 4)];
+						Vector3 c = side.points[startIndex];
+						Vector3 d = side.points[Math.floorMod((startIndex + 1), 4)];
+						Vector3 cd = d.subtract(c);
+						Vector3 cb = b.subtract(c);
+						Vector3 ba = a.subtract(b);
+						// logger.log(Level.FINE, cd);
+						// logger.log(Level.FINE, cb);
 						for (int i = 0; i < side.dispinfo.normals.length - 1; i++) { // all rows but last
 							for (int j = 0; j < side.dispinfo.normals[0].length - 1; j++) { // all columns but last
 								buffer = "";
+								double rowProgress, colProgress, u, v;
+
+								rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								Vector3 point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j].multiply(side.dispinfo.distances[i][j]));
-								double u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
+								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
-								double v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
+								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset) + " ";
 
+								rowProgress = (double)j / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)(i + 1) / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i + 1][j].multiply(side.dispinfo.distances[i + 1][j]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 1) + " ";
 
+								rowProgress = (double)(j + 1) / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)(i + 1) / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i + 1)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i + 1][j + 1].multiply(side.dispinfo.distances[i + 1][j + 1]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
 										+ ((((side.dispinfo.normals.length - 1) * i) + j) * 4 + vertexTextureOffset + 2) + " ";
 
+								rowProgress = (double)(j + 1) / (double)(side.dispinfo.normals[0].length - 1);
+								colProgress = (double)i / (double)(side.dispinfo.normals.length - 1);
 								point = side.points[startIndex]
-										.add(ad.normalize().multiply(ad.divide(side.dispinfo.normals[0].length - 1).abs().multiply(j + 1)))
-										.add(ab.normalize().multiply(ab.divide(side.dispinfo.normals.length - 1).abs().multiply(i)))
+										.add(
+											cd.multiply(colProgress).multiply(1 - rowProgress).add(
+											ba.multiply(colProgress).multiply(rowProgress))
+										)
+										.add(cb.multiply(rowProgress))
 										.add(side.dispinfo.normals[i][j + 1].multiply(side.dispinfo.distances[i][j + 1]));
 								u = Vector3.dot(point, side.uAxisVector) / (texture.width * side.uAxisScale)
 										+ side.uAxisTranslation / texture.width;
 								v = Vector3.dot(point, side.vAxisVector) / (texture.height * side.vAxisScale)
 										+ side.vAxisTranslation / texture.height;
-								u = -u + texture.width;
 								v = -v + texture.height;
 								objFile.println("vt " + u + " " + v);
 								buffer += (uniqueVerticiesList.indexOf(point) + vertexOffset) + "/"
@@ -913,10 +902,11 @@ public class App {
 		// Process Entities
 		//
 
-		System.out.println("[4/5] Processing entities...");
+		logger.log(Level.INFO, ""); // Newline to make sure progressbar stays visible
+		logger.log(Level.INFO, "[4/5] Processing entities...");
 
 		if (vmf.entities != null) { // There are no entities in this VMF
-			pbb = new ProgressBarBuilder().setStyle(ProgressBarStyle.ASCII).setTaskName("Processing entities...").showSpeed();
+			pbb = new ProgressBarBuilder().setStyle(ProgressBarStyle.ASCII).setTaskName("Processing entities...").setConsumer(new DelegatingProgressBarConsumer(logger::info)).showSpeed();
 			for (Entity entity : ProgressBar.wrap(Arrays.asList(vmf.entities), pbb)) {
 				if (entity.classname.contains("prop_")) { // If the entity is a prop
 					if (entity.model == null) {
@@ -958,14 +948,14 @@ public class App {
 											directory.mkdirs();
 										}
 									} catch (Exception e) {
-										System.out.println("Failed to create directory: " + fileOutPath.getParent());
-										System.err.println(e.toString());
+										logger.log(Level.SEVERE, "Failed to create directory: " + fileOutPath.getParent());
+										logger.log(Level.SEVERE, e.toString());
 									}
 									try {
 										vpkEntries.get(index).extract(fileOutPath);
 									} catch (Exception e) {
-										System.err.println("Failed to extract: " + fileOutPath);
-										System.err.println(e.toString());
+										logger.log(Level.SEVERE, "Failed to extract: " + fileOutPath);
+										logger.log(Level.SEVERE, e.toString());
 									}
 								}
 							}
@@ -979,7 +969,7 @@ public class App {
 						// BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 						// String line = "";
 						// while ((line = reader.readLine()) != null) {
-						// 	System.out.println(line);
+						// 	logger.log(Level.FINE, line);
 						// }
 						BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 						while ((reader.readLine()) != null) {}
@@ -991,7 +981,7 @@ public class App {
 							qcText = readFile(tempDir + File.separator + modelWithoutExtension + ".qc");
 						} catch (IOException e) {
 							//This will be caught by detecting a blank string
-							// System.out.println("Exception Occured: " + e.toString());
+							// logger.log(Level.SEVERE, "Exception Occured: " + e.toString());
 						}
 						if (qcText.matches("")) {
 							try {
@@ -1000,7 +990,7 @@ public class App {
 								qcText = readFile(tempDir + File.separator + modelWithoutExtension + File.separator + entity.modelName + ".qc");
 							} catch (IOException e) {
 								//This will be caught by detecting a blank string
-								// System.out.println("Exception Occured: " + e.toString());
+								// logger.log(Level.SEVERE, "Exception Occured: " + e.toString());
 							}
 							if (qcText.matches("")) {
 								printProgressBar("Error: Could not find QC file for model, skipping: " + entity.model);
@@ -1057,7 +1047,6 @@ public class App {
 						qc.triangles[i] = temp;
 					}
 
-					// TODO: Margin of error?
 					Set<Vector3> uniqueVerticies = new HashSet<Vector3>(verticies);
 					ArrayList<Vector3> uniqueVerticiesList = new ArrayList<Vector3>(uniqueVerticies);
 
@@ -1094,8 +1083,8 @@ public class App {
 									} // Could not find it
 									VMTText = new String(vpkEntries.get(index).readData());
 								} catch (IOException e) {
-									System.out.println("Failed to read material: " + el);
-									System.err.println(e.toString());
+									logger.log(Level.SEVERE, "Failed to read material: " + el);
+									logger.log(Level.SEVERE, e.toString());
 								}
 								if (!VMTText.isEmpty()) {
 									break;
@@ -1125,7 +1114,7 @@ public class App {
 						}
 
 						int index = getEntryIndexByPath(vpkEntries, "materials/" + vmt.basetexture + ".vtf");
-						// System.out.println(index);
+						// logger.log(Level.FINE, index);
 						if (index != -1) {
 							File materialOutPath = new File(outPath);
 							materialOutPath = new File(
@@ -1137,7 +1126,7 @@ public class App {
 										directory.mkdirs();
 									}
 								} catch (Exception e) {
-									System.out.println("Exception Occured: " + e.toString());
+									logger.log(Level.SEVERE, "Exception Occured: " + e.toString());
 								}
 								try {
 									vpkEntries.get(index).extract(materialOutPath);
@@ -1167,23 +1156,23 @@ public class App {
 										width = TargaReader.getWidth(fileContent); 
 										height = TargaReader.getHeight(fileContent);
 									} catch (Exception e) {
-										System.out.println("Cant read Material: " + materialOutPath);
-										// System.out.println(e);
+										logger.log(Level.WARNING, "Cant read Material: " + materialOutPath);
+										// logger.log(Level.WARNING, e);
 									}
-									// System.out.println("Adding Material: "+ el);
+									// logger.log(Level.FINE, "Adding Material: "+ el);
 									textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(), width, height));
 								} catch (Exception e) {
-									System.err.println("Failed to extract material: " + vmt.basetexture);
-									System.err.println(e.toString());
+									logger.log(Level.SEVERE, "Failed to extract material: " + vmt.basetexture);
+									logger.log(Level.SEVERE, e.toString());
 								}
 
 								if (vmt.bumpmap != null) { // If the material has a bump map associated with it
 									if (vmt.bumpmap.endsWith(".vtf")) {
 										vmt.bumpmap = vmt.bumpmap.substring(0, vmt.bumpmap.lastIndexOf('.')); // snip the extension
 									}
-									// System.out.println("Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
+									// logger.log(Level.FINE, "Bump found on "+vmt.basetexture+": "+vmt.bumpmap);
 									int bumpMapIndex = getEntryIndexByPath(vpkEntries, "materials/" + vmt.bumpmap + ".vtf");
-									// System.out.println(bumpMapIndex);
+									// logger.log(Level.FINE, bumpMapIndex);
 									if (bumpMapIndex != -1) {
 										File bumpMapOutPath = new File(outPath);
 										bumpMapOutPath = new File(formatPath(
@@ -1195,8 +1184,8 @@ public class App {
 													directory.mkdirs();
 												}
 											} catch (Exception e) {
-												System.out.println("Failed to create directory: " + bumpMapOutPath.getParent());
-												System.err.println(e.toString());
+												logger.log(Level.SEVERE, "Failed to create directory: " + bumpMapOutPath.getParent());
+												logger.log(Level.SEVERE, e.toString());
 											}
 											try {
 												vpkEntries.get(bumpMapIndex).extract(bumpMapOutPath);
@@ -1211,8 +1200,8 @@ public class App {
 												while ((reader.readLine()) != null) {}
 												proc.waitFor();
 											} catch (Exception e) {
-												System.err.println("Failed to extract bump material: " + vmt.bumpmap);
-												System.err.println(e.toString());
+												logger.log(Level.SEVERE, "Failed to extract bump material: " + vmt.bumpmap);
+												logger.log(Level.SEVERE, e.toString());
 											}
 										}
 									}
@@ -1238,7 +1227,7 @@ public class App {
 								int textureIndex = getTextureIndexByName(textures, el);
 								if (textureIndex == -1) { // But this is a new material
 									textureIndex = getTextureIndexByFileName(textures, vmt.basetexture);
-									// System.out.println("Adding Material: "+ el);
+									// logger.log(Level.FINE, "Adding Material: "+ el);
 									textures.add(new Texture(el, vmt.basetexture, materialOutPath.toString(),
 											textures.get(textureIndex).width, textures.get(textureIndex).height));
 
@@ -1307,7 +1296,8 @@ public class App {
 		// Clean up
 		//
 
-		System.out.println("[5/5] Cleaning up...");
+		logger.log(Level.INFO, ""); // Newline to make sure progressbar stays visible
+		logger.log(Level.INFO, "[5/5] Cleaning up...");
 
 		if (vmf.entities != null) { //There are no entities in this VMF
 			deleteRecursive(new File(Paths.get(outPath).getParent().resolve("models").toString())); // Delete models. Everything is now in the OBJ file
@@ -1318,6 +1308,6 @@ public class App {
 		objFile.close();
 		materialFile.close();
 
-		System.out.println("Conversion complete! Output can be found at: " + Paths.get(outPath).getParent());
+		logger.log(Level.INFO, "Conversion complete! Output can be found at: " + Paths.get(outPath).getParent());
 	}
 }

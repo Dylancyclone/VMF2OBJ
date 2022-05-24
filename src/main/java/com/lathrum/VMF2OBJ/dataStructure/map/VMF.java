@@ -40,13 +40,13 @@ public class VMF {
 
 	public static VMF parseVMF(String text) {
 		String objectRegex = "([a-zA-z._0-9]+)([{\\[])";
-		String keyValueRegex = "(\"[a-zA-z._0-9@]+\"|\"\")(\"[^\"]*\")";
+		String keyValueRegex = "(\"[a-zA-z._0-9]+\"|\"\")(\"[^\"]*\")";
 		String objectCommaRegex = "[}\\]]\"";
 		String cleanUpRegex = ",([}\\]])";
 
 		text = text.replaceAll("\\\\", "/"); // Replace backslashs with forwardslashs
 		text = text.replaceAll("(?m)^\\s*//(.*)", ""); // Remove all commented lines
-		text = text.replaceAll("\\x1B|#", ""); // Remove all illegal characters
+		text = text.replaceAll("\\x1B|#|@", ""); // Remove all illegal characters
 		text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("\"Code\"(.*)", ""); // Remove gmod Lua code
 		text = text.replaceAll("(\"achievement.+)\\[[0-9]\\]\"", "$1\""); // Remove achievement arrays

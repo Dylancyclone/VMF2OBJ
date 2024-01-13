@@ -38,6 +38,25 @@ Example:
 java -jar .\vmf2obj.jar .\input.vmf -o .\output -r "D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_misc_dir.vpk;D:\SteamLibrary\steamapps\common\Half-Life 2\hl2\hl2_textures_dir.vpk;C:\path\to\custom\content\;C:\path\to\more\custom\content\" -t
 ```
 
+To use external resources that are not in a VPK file, simply add the path to the folder that contains the "models"/"materials" folders.
+
+```
+custom-content/        <----- Select this folder
+├── materials/         <----- DON'T select this folder
+│   └── models/
+│       └── props/
+│           ├── clock.vmt
+│           └── clock.vtf
+└── models/            <----- DON'T select this folder
+    └── props/
+        ├── clock.dx80.vtx
+        ├── clock.dx90.vtx
+        ├── clock.mdl
+        ├── clock.phy
+        ├── clock.sw.vtx
+        └── clock.vvd
+```
+
 ## Building
 
 To build the app from source, simply run:

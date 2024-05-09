@@ -185,6 +185,7 @@ public class VMF {
 
 					side = side.replaceAll(objectRegex, ",\"$1\":$2");
 					side = side.replaceAll(keyValueRegex, "$1:$2,");
+					side = side.replaceAll(objectCommaRegex, "},\"");
 					side = side.replaceAll(",,", ",");
 					if (disps != "") {
 						disps = "\"dispinfo\":" + disps.substring(0, disps.length() - 1) + "}";

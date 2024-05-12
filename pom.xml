@@ -4,7 +4,7 @@
 
 	<groupId>com.lathrum.VMF2OBJ</groupId>
 	<artifactId>VMF2OBJ</artifactId>
-	<version>2.0.1</version>
+	<version>2.0.2</version>
 	<packaging>jar</packaging>
 
 	<name>VMF2OBJ</name>

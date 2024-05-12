@@ -1,3 +1,6 @@
+5/11/2024 2.0.2:
+* Fix build error
+
 5/8/2024 2.0.1:
 * Fix geometry error when decompiling a map saved in Hammer++
 

@@ -62,13 +62,13 @@ public class VMT {
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\x1B", ""); // Remove all illegal characters
 		text = text.replaceAll("!?srgb\\?", ""); // Remove all weirdos
-		text = text.replaceAll("360\\?", ""); // Remove all weirdos
+		text = text.replaceAll("!*360\\?", ""); // Remove all weirdos
 		text = text.replaceAll("-dx10", ""); // Remove all dx10 fallback textures
 		text = text.replaceAll("GPU[<>=]{1,2}[0-3]\\?", ""); // Remove all GPU conditional textures
 		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
-		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
+		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s\\{].*)", "$1\"$2\""); // fix unquoted values
 		text = text.replaceAll("\\$", ""); // Remove all key prefixes
-		text = text.replaceAll("\"%.+", ""); // Remove all lines with keys that start with percentage signs
+		text = text.replaceAll("\"*%.+", ""); // Remove all lines with keys that start with percentage signs
 		// text = text.replaceAll("(\".+)[{}](.+\")", "$1$2"); // Remove brackets in quotes
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" +\"", "\"\""); // Remove all whitespaces and newlines not in quotes

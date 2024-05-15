@@ -1010,8 +1010,14 @@ public class VMF2OBJ {
 							if (crowbarSubfolderSetting) {
 								path += File.separator + entity.modelName;
 							}
-							String smdText = readFile(formatPath(
+							String smdText = "";
+							try {
+								smdText = readFile(formatPath(
 									tempDir + File.separator + "models" + path + File.separator + bodyGroup));
+							} catch (IOException e) {
+								printProgressBar("Error: Could not find SMD file for model, skipping bodygroup: " + bodyGroup);
+								continue;
+							}
 	
 							SMDTriangles.addAll(Arrays.asList(SMDTriangle.parseSMD(smdText)));
 						}

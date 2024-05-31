@@ -37,15 +37,15 @@ public class QC {
 		text = text.replaceAll("//(.*)", ""); // Remove all commented lines
 		text = text.replaceAll("\\$[^\" \\t]+\\n", ""); // Remove all keyless values
 		text = text.replaceAll("[^\"](\\$[^\" \\t]+)", "\"$1\""); // fix unquoted keys
-		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s].*)", "$1\"$2\""); // fix unquoted values
+		text = text.replaceAll("(\".+\"[ \\t]+)([^\" \\t\\s\\{].*)", "$1\"$2\""); // fix unquoted values
 		text = text.replaceAll("\\$", ""); // Remove all key prefixes
 		text = text.replaceAll("\\{ (\".+\") +\"\\}\"", "$1"); // Fix texturegroup formatting
 		text = text.replaceAll("[\\t\\r\\n]", ""); // Remove all whitespaces and newlines not in quotes
 		text = text.replaceAll("\" +\"", "\"\""); // Remove all whitespaces and newlines not in quotes
 		// text = text.replaceAll("\\s+(?=([^\"]*\"[^\"]*\")*[^\"]*$)", ""); // Remove all whitespaces and newlines not in quotes
 
-		Matcher modelNameMatcher = Pattern.compile("\"modelname\"\"([a-zA-Z0-9._/-]+)\"").matcher(text);
-		String modelName = "";
+		Matcher modelNameMatcher = Pattern.compile("\"modelname\"\"([,a-zA-Z0-9._/-]+)\"").matcher(text);
+		String modelName = "model.smd";
 		if (modelNameMatcher.find()) {
 			modelName = modelNameMatcher.group(1);
 		} else {
